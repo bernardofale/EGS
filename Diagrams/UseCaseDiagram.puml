@@ -1,0 +1,73 @@
+@startuml UseCaseDiagram
+!theme cerulean
+skinparam actorStyle awesome
+left to right direction
+'actor Contabilista as C
+actor Empresário as E
+
+package Autenticação {
+  usecase "Autenticar" as Auth
+  usecase "Validar Autenticação" as Validate
+}
+
+package Notificações{
+  usecase "Aceder ao chat" as Chat
+  usecase "Enviar Mensagens" as EM
+  usecase "Receber  Mensagens" as RM
+  usecase "Enviar Notificações" as RN
+  usecase "Receber Notificações" as EN
+  usecase "Apagar Notificação" as DeleteNotification
+}
+
+
+package Inventário {
+  usecase "Importar inventário" as Import
+  usecase "Editar inventário" as Edit
+  usecase "Visualizar inventário" as View
+  usecase "criar armazem" as Create
+  
+}
+
+package Meetings {
+  usecase "Criar Reunião" as CreateMeet
+  usecase "Editar Reunião" as EditMeet
+  usecase "Apagar Reunião" as DeleteMeet
+  usecase "Ver Reuniões" as ViewMeetings
+  usecase "Criar Documento" as CreateDoc
+  usecase "Editar Documento" as SignDocument
+  usecase "Apagar Documento" as DeleteDoc
+  usecase "Ver Documentos" as ViewDoc
+  usecase "Assinar Documento" as SignDocument
+  usecase "Validar Documento" as ValidateDocument
+}
+
+package RH {
+  usecase "Ver Colaboradores" as ViewEmployee
+  usecase "Editar Colaboradore" as EditEmployee
+  usecase "Apagar Colaboradore" as DeleteEmployee
+}
+
+/'
+C -right-> Auth
+C -right-> Chat
+C -right-> RN
+C -right-> EM
+C -right-> RM
+C -right-> Import
+C -right-> Edit
+C -right-> View
+C -right-> Create
+'/
+
+E --> Auth
+E --> Chat
+E --> RN
+E --> EM
+E --> RM
+E --> Import
+E --> Edit
+E --> View
+E --> Create
+
+@enduml
+
