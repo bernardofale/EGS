@@ -1,0 +1,29 @@
+version: '3'
+
+services:
+  database:
+    image: mysql
+    ports:
+      - 3306:3306
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: docker
+      MYSQL_DATABASE: exampledb
+      MYSQL_USER: docker
+      MYSQL_PASSWORD: docker
+    volumes:
+      - db-photo-upload-service:/var/lib/mysql
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - '8002:8002'
+    depends_on:
+      - database
+    volumes:
+      - .:/app
+
+volumes:
+  db-photo-upload-service:
