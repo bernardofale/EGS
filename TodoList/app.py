@@ -20,7 +20,7 @@ class ToDoItem(BaseModel):
     meeting_id: int
     content: str
     Departamento_id: int
-    due_date: datetime  # Added due_date field to the model
+    due_date: datetime  
 
 @app.on_event("startup")
 async def startup_event():
@@ -109,9 +109,9 @@ async def create_todo(todo_item: ToDoItem):
         departamento_id = todo_item.Departamento_id
         content = todo_item.content
         meeting_id = todo_item.meeting_id
-        due_date = todo_item.due_date  # Extracting due_date from todo_item
+        due_date = todo_item.due_date  
 
-        insert_todo_sql = 'INSERT INTO todos (description, completed, priority, departamento_id, content, meeting_id, due_date) VALUES (%s, %s, %s, %s, %s, %s, %s)'  # Added due_date to SQL query
+        insert_todo_sql = 'INSERT INTO todos (description, completed, priority, departamento_id, content, meeting_id, due_date) VALUES (%s, %s, %s, %s, %s, %s, %s)'  
         cursor.execute(insert_todo_sql, (description, completed, priority, departamento_id, content, meeting_id, due_date))
         connection.commit()
 
@@ -142,9 +142,9 @@ async def update_todo(todo_id: int, todo_item: ToDoItem):
         cursor = connection.cursor()
         description = todo_item.description
         completed = todo_item.completed
-        due_date = todo_item.due_date  # Extracting due_date from todo_item
+        due_date = todo_item.due_date  
 
-        update_todo_sql = 'UPDATE todos SET description = %s, completed = %s, due_date = %s WHERE id = %s'  # Updated SQL query
+        update_todo_sql = 'UPDATE todos SET description = %s, completed = %s, due_date = %s WHERE id = %s'  
         cursor.execute(update_todo_sql, (description, completed, due_date, todo_id))
         connection.commit()
 
