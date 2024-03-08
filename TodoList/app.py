@@ -1,8 +1,9 @@
 from typing import Union
 import mysql.connector
 import logging
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
+from datetime import datetime
 
 app = FastAPI()
 
@@ -15,6 +16,11 @@ cursor = None
 class ToDoItem(BaseModel):
     description: str
     completed: bool = False
+    priority: int = 1
+    meeting_id: int
+    content: str
+    Departamento_id: int
+    due_date: datetime  # Added due_date field to the model
 
 @app.on_event("startup")
 async def startup_event():
@@ -29,7 +35,12 @@ def create_tables():
             CREATE TABLE IF NOT EXISTS todos (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 description TEXT NOT NULL,
-                completed BOOLEAN NOT NULL
+                meeting_id VARCHAR(50),
+                content TEXT NOT NULL,
+                departamento_id VARCHAR(50),
+                priority INT DEFAULT 1,
+                completed BOOLEAN NOT NULL DEFAULT FALSE,
+                due_date DATE  # Added due_date column
             )
         """
         cursor = connection.cursor()
@@ -69,11 +80,18 @@ def connect_db():
 def read_root():
     return {"Hello": "World"}
 
-@app.get('/todos', tags=["To-Do"])
-async def get_all_todos():
+@app.get('/v1/todos', tags=["To-Do"])
+async def get_all_todos(completed: Union[bool, None] = Query(None, description="Filter by completion status (true/false)"), priority: Union[int, None] = Query(None, description="Filter by priority level (1-4)")):
     try:
         cursor = connection.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM todos')
+        if completed is not None and priority is not None:
+            cursor.execute('SELECT * FROM todos WHERE completed = %s AND priority = %s', (completed, priority))
+        elif completed is not None:
+            cursor.execute('SELECT * FROM todos WHERE completed = %s', (completed,))
+        elif priority is not None:
+            cursor.execute('SELECT * FROM todos WHERE priority = %s', (priority,))
+        else:
+            cursor.execute('SELECT * FROM todos')
         results = cursor.fetchall()
         return {"To-Do List": results}
     except Exception as e:
@@ -81,24 +99,29 @@ async def get_all_todos():
     finally:
         cursor.close()
 
-@app.post('/todos', tags=["To-Do"])
+@app.post('/v1/todos', tags=["To-Do"])
 async def create_todo(todo_item: ToDoItem):
     try:
         cursor = connection.cursor()
         description = todo_item.description
         completed = todo_item.completed
+        priority = todo_item.priority
+        departamento_id = todo_item.Departamento_id
+        content = todo_item.content
+        meeting_id = todo_item.meeting_id
+        due_date = todo_item.due_date  # Extracting due_date from todo_item
 
-        insert_todo_sql = 'INSERT INTO todos (description, completed) VALUES (%s, %s)'
-        cursor.execute(insert_todo_sql, (description, completed))
+        insert_todo_sql = 'INSERT INTO todos (description, completed, priority, departamento_id, content, meeting_id, due_date) VALUES (%s, %s, %s, %s, %s, %s, %s)'  # Added due_date to SQL query
+        cursor.execute(insert_todo_sql, (description, completed, priority, departamento_id, content, meeting_id, due_date))
         connection.commit()
 
-        return {"message": "To-Do item created successfully yesssss"}
+        return {"message": "To-Do item created successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create To-Do item: {str(e)}")
     finally:
         cursor.close()
 
-@app.get('/todos/{todo_id}', tags=["To-Do"])
+@app.get('/v1/todos/{todo_id}', tags=["To-Do"])
 async def get_todo_by_id(todo_id: int):
     try:
         cursor = connection.cursor(dictionary=True)
@@ -113,15 +136,16 @@ async def get_todo_by_id(todo_id: int):
     finally:
         cursor.close()
 
-@app.put('/todos/{todo_id}', tags=["To-Do"])
+@app.put('/v1/todos/{todo_id}', tags=["To-Do"])
 async def update_todo(todo_id: int, todo_item: ToDoItem):
     try:
         cursor = connection.cursor()
         description = todo_item.description
         completed = todo_item.completed
+        due_date = todo_item.due_date  # Extracting due_date from todo_item
 
-        update_todo_sql = 'UPDATE todos SET description = %s, completed = %s WHERE id = %s'
-        cursor.execute(update_todo_sql, (description, completed, todo_id))
+        update_todo_sql = 'UPDATE todos SET description = %s, completed = %s, due_date = %s WHERE id = %s'  # Updated SQL query
+        cursor.execute(update_todo_sql, (description, completed, due_date, todo_id))
         connection.commit()
 
         return {"message": "To-Do item updated successfully"}
@@ -130,7 +154,7 @@ async def update_todo(todo_id: int, todo_item: ToDoItem):
     finally:
         cursor.close()
 
-@app.delete('/todos/{todo_id}', tags=["To-Do"])
+@app.delete('/v1/todos/{todo_id}', tags=["To-Do"])
 async def delete_todo(todo_id: int):
     try:
         cursor = connection.cursor()
@@ -141,76 +165,6 @@ async def delete_todo(todo_id: int):
         return {"message": "To-Do item deleted successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete To-Do item: {str(e)}")
-    finally:
-        cursor.close()
-
-
-@app.put('/todos/{todo_id}/complete', tags=["To-Do"], summary="Mark a To-Do Item as Completed")
-async def mark_todo_as_completed(todo_id: int):
-    try:
-        cursor = connection.cursor()
-        
-        # Check if the To-Do item exists
-        cursor.execute('SELECT id FROM todos WHERE id = %s', (todo_id,))
-        result = cursor.fetchone()
-        if not result:
-            raise HTTPException(status_code=404, detail="To-Do item not found")
-
-        # Update the completion status
-        update_todo_sql = 'UPDATE todos SET completed = true WHERE id = %s'
-        cursor.execute(update_todo_sql, (todo_id,))
-        connection.commit()
-
-        return {"message": "To-Do item marked as completed successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to mark To-Do item as completed: {str(e)}")
-    finally:
-        cursor.close()
-
-@app.put('/todos/{todo_id}/incomplete', tags=["To-Do"], summary="Mark a To-Do Item as Incomplete")
-async def mark_todo_as_incomplete(todo_id: int):
-    try:
-        cursor = connection.cursor()
-        
-        # Check if the To-Do item exists
-        cursor.execute('SELECT id FROM todos WHERE id = %s', (todo_id,))
-        result = cursor.fetchone()
-        if not result:
-            raise HTTPException(status_code=404, detail="To-Do item not found")
-
-        # Update the completion status
-        update_todo_sql = 'UPDATE todos SET completed = false WHERE id = %s'
-        cursor.execute(update_todo_sql, (todo_id,))
-        connection.commit()
-
-        return {"message": "To-Do item marked as incomplete successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to mark To-Do item as incomplete: {str(e)}")
-    finally:
-        cursor.close()
-
-
-@app.get('/todos/completed', tags=["To-Do"], summary="Get Completed To-Do Items")
-async def get_completed_todos():
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM todos WHERE completed = true')
-        results = cursor.fetchall()
-        return {"Completed To-Do Items": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Data retrieval failed: {str(e)}")
-    finally:
-        cursor.close()
-
-@app.get('/todos/incomplete', tags=["To-Do"], summary="Get Incomplete To-Do Items")
-async def get_incomplete_todos():
-    try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM todos WHERE completed = false')
-        results = cursor.fetchall()
-        return {"Incomplete To-Do Items": results}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Data retrieval failed: {str(e)}")
     finally:
         cursor.close()
 
