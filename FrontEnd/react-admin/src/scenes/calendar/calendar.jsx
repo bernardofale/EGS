@@ -1,9 +1,7 @@
 import { useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
-import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
-import listPlugin from "@fullcalendar/list";
 import {
   Box,
   List,
@@ -51,12 +49,15 @@ const Calendar = () => {
       )
     ) {
       selected.event.remove();
+      setCurrentEvents((prevEvents) =>
+        prevEvents.filter((event) => event.id !== selected.event.id)
+      );
     }
   };
 
   return (
     <Box m="20px">
-      <Header title="Calendar" subtitle="Full Calendar Interactive Page" />
+      <Header title="Calendar"/>
 
       <Box display="flex" justifyContent="space-between">
         {/* CALENDAR SIDEBAR */}
@@ -66,7 +67,7 @@ const Calendar = () => {
           p="15px"
           borderRadius="4px"
         >
-          <Typography variant="h5">Events</Typography>
+          <Typography align="center" variant="h5">Events</Typography>
           <List>
             {currentEvents.map((event) => (
               <ListItem
@@ -96,14 +97,12 @@ const Calendar = () => {
             height="75vh"
             plugins={[
               dayGridPlugin,
-              timeGridPlugin,
               interactionPlugin,
-              listPlugin,
             ]}
             headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "dayGridMonth,timeGridWeek,timeGridDay,listMonth",
+              left: "title",
+              center: "",
+              right: "prev today next",
             }}
             initialView="dayGridMonth"
             editable={true}
@@ -113,18 +112,7 @@ const Calendar = () => {
             select={handleDateClick}
             eventClick={handleEventClick}
             eventsSet={(events) => setCurrentEvents(events)}
-            initialEvents={[
-              {
-                id: "12315",
-                title: "All-day event",
-                date: "2022-09-14",
-              },
-              {
-                id: "5123",
-                title: "Timed event",
-                date: "2022-09-28",
-              },
-            ]}
+
           />
         </Box>
       </Box>
