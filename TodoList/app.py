@@ -1,170 +1,149 @@
-from typing import Union
-import mysql.connector
+from typing import Union, Optional
 import logging
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from datetime import datetime
+from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, Date
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy import desc, asc
 
 app = FastAPI()
 
+
+# novas implemetacoes:
+    # adicionei sqlalchemy
+    # adicionei o campo due date e da para dar Sort by date time or even date
+    # adicionei as versoes 1, por agora
+    # o delete e o put ja e por id e nao geral.
+
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-connection = None
-cursor = None
+
+# Define SQLAlchemy models using SQLAlchemy's ORM (Object-Relational Mapping) sugestao stor
+Base = declarative_base()
+
+class ToDoItem(Base):
+    __tablename__ = 'todos'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    description = Column(Text, nullable=False)
+    meeting_id = Column(Integer)
+    content = Column(Text, nullable=False)
+    departamento_id = Column(Integer)
+    priority = Column(Integer, default=1)
+    completed = Column(Boolean, nullable=False, default=False)
+    due_date = Column(Date)
+
+# Create SQLAlchemy engine and session
+SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://docker:docker@database/exampledb"
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # Defining Pydantic models
-class ToDoItem(BaseModel):
+class ToDoItemCreate(BaseModel):
     description: str
     completed: bool = False
     priority: int = 1
     meeting_id: int
     content: str
-    Departamento_id: int
-    due_date: datetime  
+    departamento_id: int
+    due_date: datetime
 
 @app.on_event("startup")
 async def startup_event():
-    while not connect_db():
-        continue
-
-def create_tables():
-    try:
-        global connection, cursor
-
-        create_todo_table = """
-            CREATE TABLE IF NOT EXISTS todos (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                description TEXT NOT NULL,
-                meeting_id VARCHAR(50),
-                content TEXT NOT NULL,
-                departamento_id VARCHAR(50),
-                priority INT DEFAULT 1,
-                completed BOOLEAN NOT NULL DEFAULT FALSE,
-                due_date DATE  # Added due_date column
-            )
-        """
-        cursor = connection.cursor()
-        cursor.execute(create_todo_table)
-
-        connection.commit()
-        logger.info("Tables created successfully in MySQL database")
-    except (mysql.connector.Error) as error:
-        logger.error(f"Error while creating MySQL tables: {error}")
-        return False
-
-def connect_db():
-    global connection, cursor
-    try:
-        connection = mysql.connector.connect(
-            user="docker",
-            password="docker",
-            host="database",
-            database="exampledb"
-        )
-
-        cursor = connection.cursor()
-        if connection:
-            cursor.execute("SELECT version();")
-            db_version = cursor.fetchone()
-            logger.info(f"Connected to {db_version[0]}")
-            create_tables()
-            return True
-        else:
-            logger.error("Failed to connect to the database.")
-            return False
-    except (mysql.connector.Error) as error:
-        logger.error(f"Error while connecting to MySQL: {error}")
-        return False
-
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+    Base.metadata.create_all(bind=engine)
 
 @app.get('/v1/todos', tags=["To-Do"])
-async def get_all_todos(completed: Union[bool, None] = Query(None, description="Filter by completion status (true/false)"), priority: Union[int, None] = Query(None, description="Filter by priority level (1-4)")):
+async def get_all_todos(
+    completed: Optional[bool] = Query(None, description="Filter by completion status (true/false)"),
+    priority: Optional[int] = Query(None, description="Filter by priority level (1-4)"),
+    due_date: Optional[datetime] = Query(None, description="Filter by due date"),
+    sort_by_due_date: Optional[str] = Query(None, description="Sort by due date (asc/desc)")
+):
     try:
-        cursor = connection.cursor(dictionary=True)
-        if completed is not None and priority is not None:
-            cursor.execute('SELECT * FROM todos WHERE completed = %s AND priority = %s', (completed, priority))
-        elif completed is not None:
-            cursor.execute('SELECT * FROM todos WHERE completed = %s', (completed,))
-        elif priority is not None:
-            cursor.execute('SELECT * FROM todos WHERE priority = %s', (priority,))
-        else:
-            cursor.execute('SELECT * FROM todos')
-        results = cursor.fetchall()
-        return {"To-Do List": results}
+        db = SessionLocal()
+        todos = db.query(ToDoItem)
+        
+        # Filtering
+        if completed is not None:
+            todos = todos.filter(ToDoItem.completed == completed)
+        if priority is not None:
+            todos = todos.filter(ToDoItem.priority == priority)
+        if due_date is not None:
+            todos = todos.filter(ToDoItem.due_date == due_date)
+        
+        # Sorting
+        if sort_by_due_date == "asc":
+            todos = todos.order_by(asc(ToDoItem.due_date))
+        elif sort_by_due_date == "desc":
+            todos = todos.order_by(desc(ToDoItem.due_date))
+        
+        return {"To-Do List": todos.all()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Data retrieval failed: {str(e)}")
     finally:
-        cursor.close()
+        db.close()
+
 
 @app.post('/v1/todos', tags=["To-Do"])
-async def create_todo(todo_item: ToDoItem):
+async def create_todo(todo_item: ToDoItemCreate):
     try:
-        cursor = connection.cursor()
-        description = todo_item.description
-        completed = todo_item.completed
-        priority = todo_item.priority
-        departamento_id = todo_item.Departamento_id
-        content = todo_item.content
-        meeting_id = todo_item.meeting_id
-        due_date = todo_item.due_date  
-
-        insert_todo_sql = 'INSERT INTO todos (description, completed, priority, departamento_id, content, meeting_id, due_date) VALUES (%s, %s, %s, %s, %s, %s, %s)'  
-        cursor.execute(insert_todo_sql, (description, completed, priority, departamento_id, content, meeting_id, due_date))
-        connection.commit()
-
+        db = SessionLocal()
+        db_todo = ToDoItem(**todo_item.dict())
+        db.add(db_todo)
+        db.commit()
         return {"message": "To-Do item created successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create To-Do item: {str(e)}")
     finally:
-        cursor.close()
+        db.close()
 
 @app.get('/v1/todos/{todo_id}', tags=["To-Do"])
 async def get_todo_by_id(todo_id: int):
     try:
-        cursor = connection.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM todos WHERE id = %s', (todo_id,))
-        result = cursor.fetchone()
-        if result:
-            return result
+        db = SessionLocal()
+        todo = db.query(ToDoItem).filter(ToDoItem.id == todo_id).first()
+        if todo:
+            return todo
         else:
             raise HTTPException(status_code=404, detail="To-Do item not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Data retrieval failed: {str(e)}")
     finally:
-        cursor.close()
+        db.close()
 
 @app.put('/v1/todos/{todo_id}', tags=["To-Do"])
-async def update_todo(todo_id: int, todo_item: ToDoItem):
+async def update_todo(todo_id: int, todo_item: ToDoItemCreate):
     try:
-        cursor = connection.cursor()
-        description = todo_item.description
-        completed = todo_item.completed
-        due_date = todo_item.due_date  
-
-        update_todo_sql = 'UPDATE todos SET description = %s, completed = %s, due_date = %s WHERE id = %s'  
-        cursor.execute(update_todo_sql, (description, completed, due_date, todo_id))
-        connection.commit()
-
-        return {"message": "To-Do item updated successfully"}
+        db = SessionLocal()
+        db_todo = db.query(ToDoItem).filter(ToDoItem.id == todo_id).first()
+        if db_todo:
+            db_todo.description = todo_item.description
+            db_todo.completed = todo_item.completed
+            db_todo.due_date = todo_item.due_date
+            db.commit()
+            return {"message": "To-Do item updated successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="To-Do item not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update To-Do item: {str(e)}")
     finally:
-        cursor.close()
+        db.close()
 
 @app.delete('/v1/todos/{todo_id}', tags=["To-Do"])
 async def delete_todo(todo_id: int):
     try:
-        cursor = connection.cursor()
-        delete_todo_sql = 'DELETE FROM todos WHERE id = %s'
-        cursor.execute(delete_todo_sql, (todo_id,))
-        connection.commit()
-
-        return {"message": "To-Do item deleted successfully"}
+        db = SessionLocal()
+        todo = db.query(ToDoItem).filter(ToDoItem.id == todo_id).first()
+        if todo:
+            db.delete(todo)
+            db.commit()
+            return {"message": "To-Do item deleted successfully"}
+        else:
+            raise HTTPException(status_code=404, detail="To-Do item not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete To-Do item: {str(e)}")
     finally:
-        cursor.close()
-
+        db.close()

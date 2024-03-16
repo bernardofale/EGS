@@ -3,4 +3,4 @@ python-dotenv
 uvicorn
 fastapi
 boto3
-
+sqlalchemy
