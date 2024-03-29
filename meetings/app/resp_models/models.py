@@ -1,5 +1,5 @@
 from sqlmodel import Field, SQLModel
-from pydantic import ConfigDict, BaseModel
+from pydantic import ConfigDict, BaseModel, validator
 from uuid import uuid4
 from datetime import datetime
 from typing import List
@@ -51,6 +51,18 @@ class MeetingReceive(BaseModel):
     end_date: datetime
     attendees: List[str]
     created_by: str
+
+    @validator("start_date", always=True)
+    def start_date_cannot_be_in_the_past(cls, v):
+        if v.timestamp() < datetime.today().timestamp():
+            raise ValueError("Meeting start date cannot be in the past")
+        return v
+
+    @validator("end_date", always=True)
+    def end_date_cannot_be_before_start_date(cls, v, values):
+        if "start_date" in values and v < values["start_date"]:
+            raise ValueError("Meeting end date cannot be before start date")
+        return v
 
 
 class Document(SQLModel, table=True):
