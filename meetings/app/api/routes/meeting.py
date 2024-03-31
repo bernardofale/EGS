@@ -1,5 +1,5 @@
 from fastapi import Query, APIRouter, HTTPException
-from app.resp_models.models import Meeting, MeetingReceive, MeetingAttendees
+from app.resp_models.models import Meeting, MeetingReceive, MeetingAttendees, MeetingUpdate
 from app.db.database import engine
 from sqlmodel import Session, select
 
@@ -32,7 +32,8 @@ async def create_meeting(meeting: MeetingReceive) -> Meeting:
     # Function to create a new meeting
     # Pydantic validation will raise an error if the start_date is in the past or the end_date is before the start_date
 
-    new_meet = Meeting(id=meeting.id, title=meeting.title, location=meeting.location, start_date=meeting.start_date,
+    new_meet = Meeting(id=meeting.id, title=meeting.title,
+                       location=meeting.location, start_date=meeting.start_date,
                        end_date=meeting.end_date, created_by=meeting.created_by)
     attendees = [MeetingAttendees(meeting_id=new_meet.id, user_id=attendee) for attendee in meeting.attendees]
 
@@ -45,23 +46,23 @@ async def create_meeting(meeting: MeetingReceive) -> Meeting:
 
 
 @app.put("/{meeting_id}", status_code=200)
-async def update_meeting(meeting_id: str, edit_meeting: MeetingReceive):
+async def update_meeting(meeting_id: str, edit_meeting: MeetingUpdate):
     # Function to update an existing meetingreturn {"message": f"Meeting {meeting_id} updateVVd successfully"}
-
     with Session(engine) as session:
         results = session.exec(select(Meeting).where(Meeting.id == meeting_id))
-        if results is None:
-            raise HTTPException(status_code=404, detail="No meeting found") 
-        meeting = results.one()
+        meeting = results.first()
+        if meeting is None:
+            raise HTTPException(status_code=404, detail="No meeting found")
+        attendees = [MeetingAttendees(meeting_id=meeting_id, user_id=attendee) for attendee in edit_meeting.attendees]
+        meeting_attendees = session.exec(select(MeetingAttendees).where(MeetingAttendees.meeting_id == meeting_id))
+        for attendee in meeting_attendees:
+            session.delete(attendee)
         meeting.title = edit_meeting.title
         meeting.location = edit_meeting.location
         meeting.start_date = edit_meeting.start_date
         meeting.end_date = edit_meeting.end_date
+        session.add_all(attendees)
         session.add(meeting)
-        for attendee in edit_meeting.attendees:
-            results = session.exec(select(MeetingAttendees).where(MeetingAttendees.meeting_id == meeting_id))
-            # session.delete()
-            session.add(MeetingAttendees(meeting_id=meeting_id, user_id=attendee))
         session.commit()
         session.refresh(meeting)
         return meeting
@@ -70,4 +71,12 @@ async def update_meeting(meeting_id: str, edit_meeting: MeetingReceive):
 @app.delete("/{meeting_id}", status_code=204)
 async def delete_meeting(meeting_id: str):
     # Mock function to delete a meeting
-    return {"message": f"Meeting {meeting_id} deleted successfully"}
+    with Session(engine) as session:
+        results = session.exec(select(Meeting).where(Meeting.id == meeting_id))
+        meeting = results.first()
+        if meeting is None:
+            raise HTTPException(status_code=404, detail="No meeting found")
+        for attendee in meeting.attendees:
+            session.delete(attendee)
+        session.delete(meeting)
+        session.commit()

@@ -1,4 +1,4 @@
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, Relationship
 from pydantic import ConfigDict, BaseModel, validator
 from uuid import uuid4
 from datetime import datetime
@@ -18,6 +18,9 @@ class Meeting(SQLModel, table=True):
     end_date: datetime = Field(default_factory=lambda: datetime.today())
     # User ID of the user that created the meeting / Owner of User ID
     created_by: str
+    # List of attendees for the Meeting -- Actually not a column in the database
+    attendees: List["MeetingAttendees"] = Relationship(back_populates="meeting")
+
     model_config = ConfigDict(json_schema_extra={
                                                     "id": "af5c3b3964fb4708b3d4ad6b74ec62f6",
                                                     "title": "Example",
@@ -33,15 +36,31 @@ class MeetingAttendees(SQLModel, table=True):
     # GUID
     id: int | None = Field(default=None, primary_key=True)
     # Meeting ID
-    meeting_id: str
+    meeting_id: str = Field(foreign_key="meeting.id")
     # User ID of the user that will attend the meeting
     user_id: str
+    # Meeting object -- Actually not a column in the database
+    meeting: Meeting = Relationship(back_populates="attendees")
+
     model_config = ConfigDict(json_schema_extra={
                                                     "id": "af5c3b3964fb4708b3d4ad6b74ec62f6",
                                                     "meeting_id": "a76a5d67fsfsdafje8765",
                                                     "user_id": "a76a5d67fsfsdafje8765"
                                                   })
 
+
+class MeetingUpdate(BaseModel):
+    title: str
+    location: str | None = None
+    start_date: datetime
+    end_date: datetime = Field(default_factory=lambda: datetime.today())
+    attendees: List[str]
+
+    @validator("start_date", always=True)
+    def start_date_cannot_be_in_the_past(cls, v):
+        if v.timestamp() < datetime.today().timestamp():
+            raise ValueError("Meeting start date cannot be in the past")
+        return v
 
 class MeetingReceive(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
