@@ -1,4 +1,4 @@
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, SQLModel, Relationship 
 from pydantic import ConfigDict, BaseModel, validator
 from uuid import uuid4
 from datetime import datetime
@@ -97,6 +97,8 @@ class Document(SQLModel, table=True):
     signed: bool = Field(default=False)
     # User ID of the user that uploaded the document
     uploaded_by: str
+    # Meeting ID of the meeting the document is associated with
+    meeting_id: str = Field(foreign_key="meeting.id")
     model_config = ConfigDict(json_schema_extra={
                                                     "id": "af5c3b3964fb4708b3d4ad6b74ec62f6",
                                                     "name": "document.pdf",
@@ -105,3 +107,11 @@ class Document(SQLModel, table=True):
                                                     "uploaded_by": "a76a5d67fsfsdafje8765"
                                                   }
                               )
+
+
+class DocumentResponse(BaseModel):
+    id: str
+    name: str
+    content_type: str
+    signed: bool
+    uploaded_by: str

@@ -1,13 +1,20 @@
 from fastapi import APIRouter, Query, UploadFile, File
-from app.resp_models.models import Document
+from app.resp_models.models import Document, DocumentResponse
+from app.db.database import engine
+from sqlmodel import Session, select
 
 app = APIRouter()
 
 
 @app.post("/upload", status_code=201)
-async def upload_document(user_id: str, file: UploadFile = File(...)) -> Document:
+async def upload_document(user_id: str, meeting_id: str, file: UploadFile = File(...)):
     # Mock function to upload document to the database
-    return Document(name=file.filename, content_type=file.content_type, content=bytes(), signed=False, uploaded_by="bernardo")
+    new_doc = Document(name=file.filename, content_type=file.content_type, content=bytes(file.file.read()), signed=False, uploaded_by=user_id, meeting_id=meeting_id)
+    with Session(engine) as session:
+        session.add(new_doc)
+        session.commit()
+        session.refresh(new_doc)
+    return DocumentResponse(id=new_doc.id, name=new_doc.name, content_type=new_doc.content_type, signed=False, uploaded_by=new_doc.uploaded_by) 
 
 
 @app.get("/", status_code=200)
