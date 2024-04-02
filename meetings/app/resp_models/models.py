@@ -115,3 +115,4 @@ class DocumentResponse(BaseModel):
     content_type: str
     signed: bool
     uploaded_by: str
+    meeting_id: str
