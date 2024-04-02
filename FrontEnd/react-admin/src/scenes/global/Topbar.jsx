@@ -2,12 +2,10 @@ import { Box, IconButton, useTheme, Dialog, DialogTitle, DialogContent, DialogAc
 import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ColorModeContext, tokens } from "../../theme";
-import InputBase from "@mui/material/InputBase";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
 import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
 import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
-import SearchIcon from "@mui/icons-material/Search";
 
 const Topbar = () => {
   const theme = useTheme();
@@ -18,7 +16,7 @@ const Topbar = () => {
 
 
   const handleNotificationsClick = () => {
-    navigate("/faq");
+    navigate("/noti");
   };
 
   const handlePersonClick = () => {
@@ -42,10 +40,6 @@ const Topbar = () => {
         backgroundColor={colors.primary[400]}
         borderRadius="3px"
       >
-        <InputBase sx={{ ml: 2, flex: 1 }} placeholder="Search" />
-        <IconButton type="button" sx={{ p: 1 }}>
-          <SearchIcon />
-        </IconButton>
       </Box>
 
       {/* ICONS */}
