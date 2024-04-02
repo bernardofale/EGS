@@ -1,154 +1,163 @@
-import { Box, Button, TextField } from "@mui/material";
-import { Formik } from "formik";
-import * as yup from "yup";
-import useMediaQuery from "@mui/material/useMediaQuery";
+import React, { useState } from "react";
+import { Box, Button, TextField, Select, MenuItem, Grid } from "@mui/material";
 import Header from "../../components/Header";
 
-const Form = () => {
-  const isNonMobile = useMediaQuery("(min-width:600px)");
+const Meetings = () => {
+  const [meetings, setMeetings] = useState([]);
+  const [meetingTitle, setMeetingTitle] = useState("");
+  const [day, setDay] = useState("");
+  const [month, setMonth] = useState("");
+  const [year, setYear] = useState("");
+  const [hour, setHour] = useState("");
+  const [location, setLocation] = useState("");
+  const [description, setDescription] = useState("");
 
-  const handleFormSubmit = (values) => {
-    console.log(values);
+  const addMeeting = () => {
+    const newMeeting = {
+      id: meetings.length + 1,
+      title: meetingTitle,
+      dateTime: `${day}/${month}/${year} ${hour}:00`,
+      location: location,
+      description: description,
+    };
+    setMeetings([...meetings, newMeeting]);
+    // Reset form fields
+    setMeetingTitle("");
+    setDay("");
+    setMonth("");
+    setYear("");
+    setHour("");
+    setLocation("");
+    setDescription("");
   };
 
   return (
     <Box m="20px">
-      <Header title="CREATE USER" subtitle="Create a New User Profile" />
+      <Header title="Meetings" subtitle="Create a New Meeting" />
+      <Grid container spacing={2} justifyContent="center">
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            variant="filled"
+            type="text"
+            label="Meeting Title"
+            value={meetingTitle}
+            onChange={(e) => setMeetingTitle(e.target.value)}
+          />
+        </Grid>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            variant="filled"
+            type="text"
+            label="Location"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+          />
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Select
+            fullWidth
+            variant="filled"
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+            displayEmpty
+            sx={{ textAlign: "center" }} // Center text
+          >
+            <MenuItem value="">Day</MenuItem>
+            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+              <MenuItem key={day} value={day}>
+                {day}
+              </MenuItem>
+            ))}
+          </Select>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Select
+            fullWidth
+            variant="filled"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            displayEmpty
+            sx={{ textAlign: "center" }} // Center text
+          >
+            <MenuItem value="">Month</MenuItem>
+            {[
+              "January",
+              "February",
+              "March",
+              "April",
+              "May",
+              "June",
+              "July",
+              "August",
+              "September",
+              "October",
+              "November",
+              "December"
+            ].map((month, index) => (
+              <MenuItem key={index} value={index + 1}>
+                {month}
+              </MenuItem>
+            ))}
+          </Select>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Select
+            fullWidth
+            variant="filled"
+            value={year}
+            onChange={(e) => setYear(e.target.value)}
+            displayEmpty
+            sx={{ textAlign: "center" }} // Center text
+          >
+            <MenuItem value="">Year</MenuItem>
+            {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() + i).map((year) => (
+              <MenuItem key={year} value={year}>
+                {year}
+              </MenuItem>
+            ))}
+          </Select>
+        </Grid>
+        <Grid item xs={6} sm={3}>
+          <Select
+            fullWidth
+            variant="filled"
+            value={hour}
+            onChange={(e) => setHour(e.target.value)}
+            displayEmpty
+            sx={{ textAlign: "center" }} // Center text
+          >
+            <MenuItem value="">Hour</MenuItem>
+            {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
+              <MenuItem key={hour} value={hour}>
+                {hour < 10 ? `0${hour}:00` : `${hour}:00`}
+              </MenuItem>
+            ))}
+          </Select>
+        </Grid>
+        <Grid item xs={12}>
+          <TextField
+            fullWidth
+            variant="filled"
+            type="text"
+            label="Description"
+            multiline
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            sx={{ marginBottom: 4 }}
+          />
+        </Grid>
+      </Grid>
 
-      <Formik
-        onSubmit={handleFormSubmit}
-        initialValues={initialValues}
-        validationSchema={checkoutSchema}
-      >
-        {({
-          values,
-          errors,
-          touched,
-          handleBlur,
-          handleChange,
-          handleSubmit,
-        }) => (
-          <form onSubmit={handleSubmit}>
-            <Box
-              display="grid"
-              gap="30px"
-              gridTemplateColumns="repeat(4, minmax(0, 1fr))"
-              sx={{
-                "& > div": { gridColumn: isNonMobile ? undefined : "span 4" },
-              }}
-            >
-              <TextField
-                fullWidth
-                variant="filled"
-                type="text"
-                label="First Name"
-                onBlur={handleBlur}
-                onChange={handleChange}
-                value={values.firstName}
-                name="firstName"
-                error={!!touched.firstName && !!errors.firstName}
-                helperText={touched.firstName && errors.firstName}
-                sx={{ gridColumn: "span 2" }}
-              />
-              <TextField
-                fullWidth
-                variant="filled"
-                type="text"
-                label="Last Name"
-                onBlur={handleBlur}
-                onChange={handleChange}
-                value={values.lastName}
-                name="lastName"
-                error={!!touched.lastName && !!errors.lastName}
-                helperText={touched.lastName && errors.lastName}
-                sx={{ gridColumn: "span 2" }}
-              />
-              <TextField
-                fullWidth
-                variant="filled"
-                type="text"
-                label="Email"
-                onBlur={handleBlur}
-                onChange={handleChange}
-                value={values.email}
-                name="email"
-                error={!!touched.email && !!errors.email}
-                helperText={touched.email && errors.email}
-                sx={{ gridColumn: "span 4" }}
-              />
-              <TextField
-                fullWidth
-                variant="filled"
-                type="text"
-                label="Contact Number"
-                onBlur={handleBlur}
-                onChange={handleChange}
-                value={values.contact}
-                name="contact"
-                error={!!touched.contact && !!errors.contact}
-                helperText={touched.contact && errors.contact}
-                sx={{ gridColumn: "span 4" }}
-              />
-              <TextField
-                fullWidth
-                variant="filled"
-                type="text"
-                label="Address 1"
-                onBlur={handleBlur}
-                onChange={handleChange}
-                value={values.address1}
-                name="address1"
-                error={!!touched.address1 && !!errors.address1}
-                helperText={touched.address1 && errors.address1}
-                sx={{ gridColumn: "span 4" }}
-              />
-              <TextField
-                fullWidth
-                variant="filled"
-                type="text"
-                label="Address 2"
-                onBlur={handleBlur}
-                onChange={handleChange}
-                value={values.address2}
-                name="address2"
-                error={!!touched.address2 && !!errors.address2}
-                helperText={touched.address2 && errors.address2}
-                sx={{ gridColumn: "span 4" }}
-              />
-            </Box>
-            <Box display="flex" justifyContent="end" mt="20px">
-              <Button type="submit" color="secondary" variant="contained">
-                Create New User
-              </Button>
-            </Box>
-          </form>
-        )}
-      </Formik>
+      <Box display="flex" justifyContent="center" mt={2}>
+        <Button size="large" onClick={addMeeting} color="secondary" variant="contained">
+          Create New Meeting
+        </Button>
+      </Box>
     </Box>
   );
 };
 
-const phoneRegExp =
-  /^((\+[1-9]{1,4}[ -]?)|(\([0-9]{2,3}\)[ -]?)|([0-9]{2,4})[ -]?)*?[0-9]{3,4}[ -]?[0-9]{3,4}$/;
-
-const checkoutSchema = yup.object().shape({
-  firstName: yup.string().required("required"),
-  lastName: yup.string().required("required"),
-  email: yup.string().email("invalid email").required("required"),
-  contact: yup
-    .string()
-    .matches(phoneRegExp, "Phone number is not valid")
-    .required("required"),
-  address1: yup.string().required("required"),
-  address2: yup.string().required("required"),
-});
-const initialValues = {
-  firstName: "",
-  lastName: "",
-  email: "",
-  contact: "",
-  address1: "",
-  address2: "",
-};
-
-export default Form;
+export default Meetings;
