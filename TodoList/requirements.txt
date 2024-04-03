@@ -4,3 +4,4 @@ uvicorn
 fastapi
 boto3
 sqlalchemy
+generateApiKey
