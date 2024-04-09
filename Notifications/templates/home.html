@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+<title>SimplyNotify API</title>
+{% endblock %}
+
+
+{% block content %}
+{% with alert=alert %}
+    {% include "alert.html" %}
+{% endwith %}
+
+<div class="container">
+    <div class="row">
+      <h5 class="display-5">Your Regist is completed</h5>
+      <div class="text-danger font-weight-bold">
+          {% for error in errors %}
+            <li>{{error}}</li>
+          {% endfor %}
+      </div>
+    </div>
+
+    <div class="row my-5">
+      <form method="POST">
+        <div class="mb-3">
+          <label>Your Username</label>
+          <input type="text" name="username" value="{{username}}" class="form-control"  readonly>
+        </div>
+        <div class="mb-3">
+          <label>Your Service Name</label>
+          <input type="text" name="name_of_service" value="{{name_of_service}}" class="form-control" readonly>
+        </div>
+        <div class="mb-3">
+          <label>Your Api Key</label>
+          <input type="password" id="api_key" Value={{api_key}} name="api_key" class="form-control" readonly>
+          <input type="checkbox" onclick="myFunction()"> Show Api Key
+        </div>
+
+        <script>
+function myFunction() {
+  var x = document.getElementById("api_key");
+  if (x.type === "password") {
+    x.type = "text";
+  } else {
+    x.type = "password";
+  }
+}
+</script>
+<!--        <div class="mb-3">-->
+<!--          <label>Password</label>-->
+<!--          <input type="password" required placeholder="Choose a secure password" value="{{password}}" name="password" class="form-control">-->
+<!--        </div>-->
+
+      </form>
+    </div>
+  </div>
+
+<!-- Old content here -->
+
+{% endblock %}
