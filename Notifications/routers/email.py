@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from starlette.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Literal, Annotated
-from ..db.crud import usercrud
-from ..db.database import get_db
+from db.crud import usercrud
+from db.database import get_db
 from sqlalchemy.orm import Session
 
 _TYPES = Literal["html", "plain"]

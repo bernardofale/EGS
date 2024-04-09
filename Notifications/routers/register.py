@@ -3,10 +3,10 @@ from fastapi import APIRouter, Depends, Request, HTTPException, Form
 from fastapi.templating import Jinja2Templates
 from pydantic import ValidationError
 import json
-from ..db.crud import usercrud
-from ..db.schemas import userschema
+from db.crud import usercrud
+from db.schemas import userschema
 from sqlalchemy.orm import Session
-from ..db.database import get_db
+from db.database import get_db
 
 router = APIRouter()
 

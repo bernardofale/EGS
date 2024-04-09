@@ -5,9 +5,9 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel
-from ..db.crud import usercrud
-from ..db.database import get_db
-from ..db.schemas.userschema import User
+from db.crud import usercrud
+from db.database import get_db
+from db.schemas.userschema import User
 
 from sqlalchemy.orm import Session
 

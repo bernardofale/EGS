@@ -1,8 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Header, Depends,Body
 from fastapi import APIRouter
 from pydantic import BaseModel
-from ..db.crud import usercrud, telergamcrud
-from ..db.database import get_db
+from db.crud import usercrud, telergamcrud
+from db.database import get_db
 from sqlalchemy.orm import Session
 from typing import Annotated
 from .email import send_email_async, EmailSchema

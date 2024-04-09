@@ -1,8 +1,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query, Request
-from .routers import email, auth, register, telegram, notifications
+from routers import email, auth, register, telegram, notifications
 from fastapi.templating import Jinja2Templates
-from .db.models import usermodel, telegrammodel
-from .db.database import engine
+from db.models import usermodel, telegrammodel
+from db.database import engine
 
 usermodel.Base.metadata.create_all(bind=engine)
 telegrammodel.Base.metadata.create_all(bind=engine)
