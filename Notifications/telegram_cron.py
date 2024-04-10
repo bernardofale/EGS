@@ -2,8 +2,8 @@ from fastapi import Depends
 from fastapi_utilities import repeat_every
 import os
 from dotenv import load_dotenv
-from .db.crud import telergamcrud
-from .db.schemas import telegramchema
+from db.crud import telergamcrud
+from db.schemas import telegramchema
 from sqlalchemy.orm import Session
 import httpx
 from sqlalchemy import create_engine
