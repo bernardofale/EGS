@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ProSidebar, Menu, MenuItem } from "react-pro-sidebar";
 import { Box, IconButton, Typography, useTheme } from "@mui/material";
 import { Link } from "react-router-dom";
@@ -6,11 +6,12 @@ import "react-pro-sidebar/dist/css/styles.css";
 import { tokens } from "../../theme";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
-import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import GroupsIcon from '@mui/icons-material/Groups';
+import ChecklistIcon from '@mui/icons-material/Checklist';
+import DocumentScannerIcon from '@mui/icons-material/DocumentScanner';
 
 const Item = ({ title, to, icon, selected, setSelected }) => {
   const theme = useTheme();
@@ -33,8 +34,18 @@ const Item = ({ title, to, icon, selected, setSelected }) => {
 const Sidebar = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [selected, setSelected] = useState("Dashboard");
+  const [isCollapsed, setIsCollapsed] = useState(
+    localStorage.getItem("isCollapsed") === "true" ? true : false
+  );
+  const [selected, setSelected] = useState(localStorage.getItem("selected") || "Dashboard");
+
+  useEffect(() => {
+    localStorage.setItem("isCollapsed", isCollapsed);
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    localStorage.setItem("selected", selected);
+  }, [selected]);
 
   return (
     <Box
@@ -58,7 +69,6 @@ const Sidebar = () => {
     >
       <ProSidebar collapsed={isCollapsed}>
         <Menu iconShape="square">
-          {/* LOGO AND MENU ICON */}
           <MenuItem
             onClick={() => setIsCollapsed(!isCollapsed)}
             icon={isCollapsed ? <MenuOutlinedIcon /> : undefined}
@@ -111,7 +121,7 @@ const Sidebar = () => {
           <Box paddingLeft={isCollapsed ? undefined : "10%"}>
             <Item
               title="Dashboard"
-              to="/"
+              to="/dashboard"
               icon={<HomeOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
@@ -138,9 +148,16 @@ const Sidebar = () => {
               setSelected={setSelected}
             />
             <Item
-              title="Inventory"
-              to="/inventory"
-              icon={<PersonOutlinedIcon />}
+              title="Documents"
+              to="/documents"
+              icon={<DocumentScannerIcon />}
+              selected={selected}
+              setSelected={setSelected}
+            />
+            <Item
+              title="To Do list"
+              to="/todo"
+              icon={<ChecklistIcon />}
               selected={selected}
               setSelected={setSelected}
             />

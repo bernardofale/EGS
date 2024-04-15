@@ -6,7 +6,8 @@ import Dashboard from "./scenes/dashboard";
 import Notifications from "./scenes/noti";
 import HumanResources from "./scenes/hr";
 import Meetings from "./scenes/meetings";
-import Inventory from "./scenes/inventory";
+import Documents from "./scenes/documents";
+import Inventory from "./scenes/todo";
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { ColorModeContext, useMode } from "./theme";
 import Calendar from "./scenes/calendar/calendar";
@@ -24,11 +25,12 @@ function App() {
           <main className="content">
             <Topbar setIsSidebar={setIsSidebar} />
             <Routes>
-              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/noti" element={<Notifications />} />
               <Route path="/hr" element={<HumanResources />} />
               <Route path="/meetings" element={<Meetings />} />
-              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/todo" element={<Inventory />} />
               <Route path="/calendar" element={<Calendar />} />
             </Routes>
           </main>
