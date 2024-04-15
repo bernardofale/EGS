@@ -14,6 +14,13 @@ __pycache__/
 *.log
 *.csv
 *.sqlite
+*.db
 
 # Ignore Vscode Files
 *.vscode/*
+*.idea/*
+
+# Ignore environment config files
+*.env
+
+

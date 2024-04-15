@@ -1,12 +1,15 @@
 from typing import Union, Optional
 import logging
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query,Header, Depends
 from pydantic import BaseModel
 from datetime import datetime
 from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import desc, asc
+from generateApiKey import generateApiKey
+import random
+import string
 
 app = FastAPI()
 
@@ -16,12 +19,17 @@ app = FastAPI()
     # adicionei o campo due date e da para dar Sort by date time or even date
     # adicionei as versoes 1, por agora
     # o delete e o put ja e por id e nao geral.
+    # 
+    # Por fazer: Adicionar generate Api Key
+
 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Define SQLAlchemy models using SQLAlchemy's ORM (Object-Relational Mapping) sugestao stor
+
+
+# Define SQLAlchemy models using SQLAlchemy's ORM (Object-Relational Mapping), sugestao do stor
 Base = declarative_base()
 
 class ToDoItem(Base):
@@ -51,6 +59,7 @@ class ToDoItemCreate(BaseModel):
     departamento_id: int
     due_date: datetime
 
+
 @app.on_event("startup")
 async def startup_event():
     Base.metadata.create_all(bind=engine)
@@ -66,7 +75,7 @@ async def get_all_todos(
         db = SessionLocal()
         todos = db.query(ToDoItem)
         
-        # Filtering
+        # Filtering por completed or incompleted, priority 1-4 and due_data
         if completed is not None:
             todos = todos.filter(ToDoItem.completed == completed)
         if priority is not None:
@@ -74,7 +83,7 @@ async def get_all_todos(
         if due_date is not None:
             todos = todos.filter(ToDoItem.due_date == due_date)
         
-        # Sorting
+        # Sorting asc = ascendente e desc = descendente
         if sort_by_due_date == "asc":
             todos = todos.order_by(asc(ToDoItem.due_date))
         elif sort_by_due_date == "desc":
@@ -100,6 +109,7 @@ async def create_todo(todo_item: ToDoItemCreate):
     finally:
         db.close()
 
+
 @app.get('/v1/todos/{todo_id}', tags=["To-Do"])
 async def get_todo_by_id(todo_id: int):
     try:
@@ -113,6 +123,7 @@ async def get_todo_by_id(todo_id: int):
         raise HTTPException(status_code=500, detail=f"Data retrieval failed: {str(e)}")
     finally:
         db.close()
+
 
 @app.put('/v1/todos/{todo_id}', tags=["To-Do"])
 async def update_todo(todo_id: int, todo_item: ToDoItemCreate):
@@ -131,6 +142,7 @@ async def update_todo(todo_id: int, todo_item: ToDoItemCreate):
         raise HTTPException(status_code=500, detail=f"Failed to update To-Do item: {str(e)}")
     finally:
         db.close()
+
 
 @app.delete('/v1/todos/{todo_id}', tags=["To-Do"])
 async def delete_todo(todo_id: int):

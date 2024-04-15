@@ -1,163 +1,147 @@
-from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2AuthorizationCodeBearer
+from fastapi.responses import RedirectResponse
+from sqlalchemy import create_engine, Column, String
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
-from typing import Optional
+import base64
+import requests
+
 
 app = FastAPI()
+oauth2_scheme_ua = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="https://wso2-gw.ua.pt/authorize",
+    tokenUrl="https://wso2-gw.ua.pt/token",
+    scopes={"openid": "OpenID authentication"}
+)
+oauth2_scheme_github = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="https://github.com/login/oauth/authorize",
+    tokenUrl="https://github.com/login/oauth/access_token",
+    scopes={"user": "User details"}
+)
 
-# Secret key to sign JWT tokens
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+DATABASE_URL = "mysql+mysqlconnector://root:password@localhost:3307/auth"
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
-# Example user model, replace it with your actual user model
-class User(BaseModel):
-    username: str
-    email: str
-    hashed_password: str
-
-# Example user data store, replace it with your actual data store
-fake_users_db = {
-    "testuser": {
-        "username": "testuser",
-        "email": "testuser@example.com",
-        "hashed_password": "fakehashedpassword",
-    }
-}
-
-# OAuth2 password bearer for token-based authentication
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-# Function to create JWT tokens
-def create_jwt_token(data: dict, expires_delta: timedelta):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + expires_delta
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-# Function to get current user from token
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    if username not in fake_users_db:
-        raise credentials_exception
-    return User(**fake_users_db[username])
-
-# Models for request and response payloads
-class RegisterRequest(BaseModel):
-    username: str
-    email: str
-    password: str
-
-class LoginRequest(BaseModel):
-    username: str
-    password: str
+class User(Base):
+    __tablename__ = "users"
+    email = Column(String, primary_key=True, index=True)
+    access_token = Column(String)
+    provider = Column(String)
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-class ProfileResponse(BaseModel):
-    username: str
-    email: str
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-class UpdateProfileRequest(BaseModel):
-    email: Optional[str] = None
+@app.get("/")
+async def index():
+    return {"message": "Welcome to the index page"}
 
-class ChangePasswordRequest(BaseModel):
-    old_password: str
-    new_password: str
+@app.get("/index")
+async def main():
+    return {"Congratulations, your authentication was valid"}
 
-# Endpoint to register a new user
-@app.post("/register")
-async def register(user: RegisterRequest):
-    # Logic for user registration (validate, hash password, save to database, etc.)
-    # For simplicity, using a fake database in this example
-    fake_users_db[user.username] = {
-        "username": user.username,
-        "email": user.email,
-        "hashed_password": "fakehashedpassword",
+@app.get("/signin/ua")
+async def signin():
+    redirect_uri = "http://localhost:5000"
+    client_id = "agh44RajMJcYvCIq3lSMrutfPJ0a"
+    state = "1234567890"
+    scope = "openid"
+    authorization_url = f"https://wso2-gw.ua.pt/authorize?response_type=code&client_id={client_id}&state={state}&scope={scope}&redirect_uri={redirect_uri}"
+    return RedirectResponse(url=authorization_url)
+
+@app.get("/signin/github")
+async def signin_github():
+    redirect_uri = "http://localhost:8000/index"
+    client_id = "ed07148229986602e861"
+    state = "1234567890"
+    scope = "user"
+    authorization_url = f"https://github.com/login/oauth/authorize?client_id={client_id}&redirect_uri={redirect_uri}&state={state}&scope={scope}"
+    return RedirectResponse(url=authorization_url)
+
+@app.get("/callback/ua")
+async def callback_ua(code: str):
+    client_id = "agh44RajMJcYvCIq3lSMrutfPJ0a"
+    client_secret = "WJckU0FSb41rsJHLnFPYqBFvSZoa"
+    redirect_uri = "http://localhost:5000"
+    data = {
+        "grant_type": "authorization_code",
+        "code": code,
+        "redirect_uri": redirect_uri,
     }
-    return {"message": "User registered successfully"}
-
-# Endpoint to authenticate and generate a token
-@app.post("/login", response_model=Token)
-async def login(user: LoginRequest):
-    # Logic for user authentication (validate credentials, generate token, etc.)
-    # For simplicity, using a fake database in this example
-    if user.username in fake_users_db and fake_users_db[user.username]["hashed_password"] == "fakehashedpassword":
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        access_token = create_jwt_token(data={"sub": user.username}, expires_delta=access_token_expires)
-        return {"access_token": access_token, "token_type": "bearer"}
+    headers = {
+        "Authorization": f"Basic {base64.b64encode(f'{client_id}:{client_secret}'.encode()).decode()}"
+    }
+    response = requests.post("https://wso2-gw.ua.pt/token", data=data, headers=headers)
+    if response.status_code == 200:
+        token_data = response.json()
+        access_token = token_data.get("access_token")
+        refresh_token = token_data.get("refresh_token")
+        token_type = token_data.get("token_type")
+        
+        # Store user information in the database
+        db = SessionLocal()
+        db.add(User(email="dummy@example.com", access_token=access_token, refresh_token=refresh_token))
+        db.commit()
+        db.close()
+        
+        return {"access_token": access_token}
     else:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        raise HTTPException(status_code=response.status_code, detail="Failed to obtain access token")
 
-# Endpoint to retrieve user profile
-@app.get("/profile", response_model=ProfileResponse)
-async def get_profile(current_user: User = Depends(get_current_user)):
-    return current_user.dict()
-
-# Endpoint to update user profile
-@app.put("/profile", response_model=dict)
-async def update_profile(update_data: UpdateProfileRequest, current_user: User = Depends(get_current_user)):
-    # Logic for updating user profile (validate, update database, etc.)
-    # For simplicity, using a fake database in this example
-    if update_data.email:
-        current_user.email = update_data.email
-    return {"message": "Profile updated successfully"}
-
-# Endpoint to delete user account
-@app.delete("/profile", response_model=dict)
-async def delete_profile(current_user: User = Depends(get_current_user)):
-    # Logic for deleting user account (delete from database, invalidate tokens, etc.)
-    # For simplicity, using a fake database in this example
-    del fake_users_db[current_user.username]
-    return {"message": "Account deleted successfully"}
-
-# Endpoint to logout and invalidate token
-@app.post("/logout", response_model=dict)
-async def logout():
-    # Logic for logging out (invalidate token, remove session data, etc.)
-    return {"message": "Logged out successfully"}
-
-# Endpoint to request password reset
-@app.post("/reset-password", response_model=dict)
-async def request_password_reset(user_identifier: str):
-    # Logic for sending password reset instructions (generate token, send email, etc.)
-    # For simplicity, not implementing the actual password reset functionality in this example
-    return {"message": "Password reset instructions sent"}
-
-# Endpoint to perform password reset
-@app.put("/reset-password", response_model=dict)
-async def reset_password(new_password: str, reset_token: str):
-    # Logic for resetting the user's password (validate token, update password, etc.)
-    # For simplicity, not implementing the actual password reset functionality in this example
-    return {"message": "Password reset successfully"}
-
-# Endpoint to change user password
-@app.patch("/change-password", response_model=dict)
-async def change_password(password_data: ChangePasswordRequest, current_user: User = Depends(get_current_user)):
-    # Logic for changing user password (validate, update database, etc.)
-    # For simplicity, using a fake database in this example
-    if fake_users_db[current_user.username]["hashed_password"] == "fakehashedpassword":
-        fake_users_db[current_user.username]["hashed_password"] = "newfakehashedpassword"
-        return {"message": "Password changed successfully"}
+@app.get("/callback/github")
+async def callback_github(code: str):
+    client_id = "ed07148229986602e861"
+    client_secret = "5d7e5a7849a396f44c2dfd4cc59bf490fed0348b"
+    redirect_uri = "http://localhost:8000/index"
+    data = {
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "code": code,
+        "redirect_uri": redirect_uri,
+    }
+    response = requests.post("https://github.com/login/oauth/access_token", data=data)
+    if response.status_code == 200:
+        token_data = response.text
+        access_token = token_data.split("=")[1].split("&")[0]
+        
+        # Fetch user details
+        headers = {"Authorization": f"token {access_token}"}
+        user_response = requests.get("https://api.github.com/user", headers=headers)
+        user_data = user_response.json()
+        
+        # Store user information in the database
+        db = SessionLocal()
+        db.add(User(email=user_data['email'], access_token=access_token, provider='github'))
+        db.commit()
+        db.close()
+        
+        return {"access_token": access_token}
     else:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Unable to change password")
+        raise HTTPException(status_code=response.status_code, detail="Failed to obtain access token")
+
+@app.get("/authVeri")
+async def register(access_token: str = Depends(oauth2_scheme_ua)):
+    # Check if the user is already in the database
+    db = SessionLocal()
+    user = db.query(User).filter(User.access_token == access_token).first()
+    db.close()
+
+    if user:
+        return {"message": "Welcome to the homepage!"}
+    else:
+        return {"message": "Please register"}
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

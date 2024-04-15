@@ -1,0 +1,19 @@
+# 
+FROM python:3.10
+
+# 
+WORKDIR /Notifications
+
+# 
+COPY ./requirements.txt /Notifications/requirements.txt
+
+# 
+RUN pip install --no-cache-dir --upgrade -r /Notifications/requirements.txt
+
+# 
+COPY telegram_cron.py /Notifications/telegram_cron.py
+COPY db/ /Notifications/db/
+
+#
+
+CMD ["uvicorn", "telegram_cron:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]

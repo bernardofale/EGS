@@ -1,0 +1,11 @@
+fastapi>
+pydantic
+uvicorn
+fastapi-mail
+python-dotenv
+sqlalchemy
+python-jose
+passlib
+python-multipart
+fastapi_utilities
+httpx
