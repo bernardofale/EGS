@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Query, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Query, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from fastapi.responses import FileResponse
-from app.resp_models.models import Document, DocumentResponse
+from app.resp_models.models import Document, DocumentResponse, DocumentSign
 from app.db.database import engine
 from sqlmodel import Session, select
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from tempfile import NamedTemporaryFile
+from dropbox_sign import ApiClient, ApiException, Configuration, apis, models
+from app.dependencies import get_hello_sign_key
+import os
+
 
 app = APIRouter()
 
@@ -32,7 +36,6 @@ async def get_all_documents(user_id: str = Query(None)):
 
 
 def delete_tempfile(file_path: str):
-    import os
     os.unlink(file_path)
 
 
@@ -76,6 +79,97 @@ async def delete_document(document_id: str):
 
 
 @app.post("/{document_id}/sign/", status_code=200)
-async def sign_document(document_id: int, signature: str):
-    # Mock function to sign a document
-    return {"document_id": document_id, "signature": signature}
+async def sign_document(background_tasks: BackgroundTasks, document_id: str, doc_sign: DocumentSign, api_key: str = Depends(get_hello_sign_key)):
+    config = Configuration(
+        username=api_key
+    )
+
+    with Session(engine) as session:
+        # Fetch document from the database
+        try:
+            results = session.exec(select(Document).where(Document.id == document_id)).one()
+        except NoResultFound:
+            raise HTTPException(status_code=404, detail="ERROR: No document found")
+        except MultipleResultsFound:
+            raise HTTPException(status_code=500, detail="ERROR: Multiple documents found")
+        # Write document to a temporary file
+        with NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(results.content)
+            background_tasks.add_task(delete_tempfile, temp_file.name)
+            # Send document for signing
+            with ApiClient(config) as api_client:
+                signature_request_api = apis.SignatureRequestApi(api_client)
+
+                signer_1 = models.SubSignatureRequestSigner(
+                    email_address=doc_sign.user_email,
+                    name=doc_sign.user_name,
+                    order=0,
+                )
+                signing_options = models.SubSigningOptions(
+                    draw=True,
+                    type=True,
+                    upload=True,
+                    phone=True,
+                    default_type="draw",
+                )
+
+                field_options = models.SubFieldOptions(
+                    date_format="DD - MM - YYYY",
+                )
+
+                data = models.SignatureRequestSendRequest(
+                    title=results.name,
+                    subject=doc_sign.subject,
+                    message=doc_sign.message,
+                    signers=[signer_1],
+                    cc_email_addresses=[],
+                    files=[open(temp_file.name, "rb")],
+                    metadata={},
+                    signing_options=signing_options,
+                    field_options=field_options,
+                    test_mode=True,
+                )
+
+                try:
+                    response = signature_request_api.signature_request_send(data)
+                    results.signature_request_id = response.signature_request.signature_request_id
+                    session.add(results)
+                    session.commit()
+                except ApiException as e:
+                    print("Exception when calling Dropbox Sign API: %s\n" % e)
+                    print("Exception when calling Dropbox Sign API: %s\n" % e)
+        return {"message": "Document sent for signing"}
+
+
+@app.post("/{document_id}/sign/verify", status_code=200)
+async def verify_document(background_tasks: BackgroundTasks, document_id: str, api_key: str = Depends(get_hello_sign_key)):
+    config = Configuration(
+        username=api_key
+    )
+
+    with Session(engine) as session:
+        # Fetch document from the database
+        try:
+            results = session.exec(select(Document).where(Document.id == document_id)).one()
+        except NoResultFound:
+            raise HTTPException(status_code=404, detail="ERROR: No document found")
+        except MultipleResultsFound:
+            raise HTTPException(status_code=500, detail="ERROR: Multiple documents found")
+        # Check if document is signed
+        if results.signed:
+            return {"message": "Document available for download"}
+        with ApiClient(config) as api_client:
+            signature_request_api = apis.SignatureRequestApi(api_client)
+            signature_request_id = results.signature_request_id
+            try:
+                response = signature_request_api.signature_request_get(signature_request_id)
+                if response.signature_request.is_complete:
+                    results.signed = True
+                    response = signature_request_api.signature_request_files(signature_request_id)
+                    results.content = response.read()
+                    session.add(results)
+                    session.commit()
+                    return {"message": "Document available for download"}
+                return {"message": "Document not signed yet"}
+            except ApiException as e:
+                print("Exception when calling Dropbox Sign API: %s\n" % e)

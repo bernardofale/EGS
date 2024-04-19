@@ -1,4 +1,4 @@
-from sqlmodel import Field, SQLModel, Relationship 
+from sqlmodel import Field, SQLModel, Relationship
 from pydantic import ConfigDict, BaseModel, validator
 from uuid import uuid4
 from datetime import datetime
@@ -62,6 +62,7 @@ class MeetingUpdate(BaseModel):
             raise ValueError("Meeting start date cannot be in the past")
         return v
 
+
 class MeetingReceive(BaseModel):
     id: str = Field(default_factory=lambda: uuid4().hex)
     title: str
@@ -97,6 +98,8 @@ class Document(SQLModel, table=True):
     signed: bool = Field(default=False)
     # User ID of the user that uploaded the document
     uploaded_by: str
+    # HelloSign signature request ID
+    signature_request_id: str | None = None
     # Meeting ID of the meeting the document is associated with
     meeting_id: str = Field(foreign_key="meeting.id")
     model_config = ConfigDict(json_schema_extra={
@@ -116,3 +119,14 @@ class DocumentResponse(BaseModel):
     signed: bool
     uploaded_by: str
     meeting_id: str
+
+
+class DocumentSign(BaseModel):
+    # User email
+    user_email: str
+    # User name
+    user_name: str
+    # Document subject
+    subject: str
+    # Message
+    message: str
