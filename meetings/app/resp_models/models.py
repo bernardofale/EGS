@@ -18,16 +18,18 @@ class Meeting(SQLModel, table=True):
     end_date: datetime = Field(default_factory=lambda: datetime.today())
     # User ID of the user that created the meeting / Owner of User ID
     created_by: str
-    # List of attendees for the Meeting -- Actually not a column in the database
-    attendees: List["MeetingAttendees"] = Relationship(back_populates="meeting")
+    # List of attendees for the Meeting --
+    # Actually not a column in the database
+    attendees: List["MeetingAttendees"] = Relationship(
+        back_populates="meeting")
 
     model_config = ConfigDict(json_schema_extra={
-                                                    "id": "af5c3b3964fb4708b3d4ad6b74ec62f6",
+                                                    "id": "af5c3b3964fb4708b3",
                                                     "title": "Example",
                                                     "location": "null",
                                                     "date": "2024-02-26",
                                                     "attendees": "null",
-                                                    "created_by": "a76a5d67fsfsdafje8765"
+                                                    "created_by": "a76a5d67fsf"
                                                 }
                               )
 
@@ -43,9 +45,9 @@ class MeetingAttendees(SQLModel, table=True):
     meeting: Meeting = Relationship(back_populates="attendees")
 
     model_config = ConfigDict(json_schema_extra={
-                                                    "id": "af5c3b3964fb4708b3d4ad6b74ec62f6",
-                                                    "meeting_id": "a76a5d67fsfsdafje8765",
-                                                    "user_id": "a76a5d67fsfsdafje8765"
+                                                    "id": "af5c3b3964fb4708b",
+                                                    "meeting_id": "a76a5d67f",
+                                                    "user_id": "a76a5d67fsfsda"
                                                   })
 
 
@@ -103,11 +105,11 @@ class Document(SQLModel, table=True):
     # Meeting ID of the meeting the document is associated with
     meeting_id: str = Field(foreign_key="meeting.id")
     model_config = ConfigDict(json_schema_extra={
-                                                    "id": "af5c3b3964fb4708b3d4ad6b74ec62f6",
+                                                    "id": "af5c3b3964fb4708b3",
                                                     "name": "document.pdf",
-                                                    "content_type": "image/jpeg",
+                                                    "content_type": "imag/png",
                                                     "signed": False,
-                                                    "uploaded_by": "a76a5d67fsfsdafje8765"
+                                                    "uploaded_by": "a76a5d67f"
                                                   }
                               )
 

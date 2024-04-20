@@ -9,7 +9,8 @@ HELLOSIGN_API_KEY = os.getenv("HELLOSIGN_KEY")
 security = HTTPBearer()
 
 
-async def verify_key(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def verify_key(credentials: HTTPAuthorizationCredentials
+                     = Depends(security)):
     key = credentials.credentials
     if key != API_KEY:
         raise HTTPException(status_code=401, detail="ERROR: Invalid key")
