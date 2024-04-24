@@ -1,0 +1,26 @@
+version: '3.9'
+
+services:
+
+  db:
+    image: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: auth
+      MYSQL_USER: root
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+      
+  api:
+    build: .
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "mysql+mysqlconnector://root:password@db:3306/auth"
+
+volumes:
+  db_data:

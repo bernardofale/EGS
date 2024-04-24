@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            background-color: #141b2d; /* Dark blue background color */
+            font-family: 'Montserrat', sans-serif; /* Font family */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            text-align: center;
+            background-color: #0a1321; /* Darker blue background color */
+            border-radius: 20px;
+            padding: 50px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3); /* Box shadow */
+        }
+
+        h1 {
+            font-size: 48px;
+            color: #ffffff; /* White text color */
+            margin-bottom: 30px;
+            letter-spacing: 2px; /* Increased letter spacing */
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            margin-top: 40px;
+        }
+
+        button {
+            padding: 20px 40px;
+            font-size: 20px;
+            cursor: pointer;
+            border: none;
+            border-radius: 10px;
+            transition: background-color 0.3s ease;
+            background-color: #1f2a40; /* Dark blue button color */
+            color: #ffffff; /* White text color */
+        }
+
+        button:hover {
+            background-color: #33415c; /* Dark blue button color on hover */
+        }
+
+        .button-container img {
+            width: 50px;
+            height: auto;
+            vertical-align: middle;
+            margin-right: 10px;
+            filter: brightness(0.8); /* Slightly reduce brightness */
+        }
+
+        .button-container img:hover {
+            filter: brightness(1); /* Restore brightness on hover */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Choose your Login!</h1>
+        <div class="button-container">
+            <button onclick="loginWithUA()">
+                <img src="./images/ua.png" alt="UA Logo"> Log in with UA
+            </button>
+            <button onclick="loginWithGitHub()">
+                <img src="./images/github.png" alt="GitHub Logo"> Log in with GitHub
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function loginWithUA() {
+            // Make an AJAX request to UA authentication endpoint
+            fetch('http://127.0.0.1:8000/signin/ua')
+                .then(response => {
+                    if (response.ok) {
+                        // Redirect to the returned URL
+                        window.location.href = response.url;
+                    } else {
+                        console.error('Failed to sign in with UA:', response.statusText);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error signing in with UA:', error);
+                });
+        }
+    
+        function loginWithGitHub() {
+            // Make an AJAX request to GitHub authentication endpoint
+            fetch('http://127.0.0.1:8000/signin/github')
+                .then(response => {
+                    if (response.ok) {
+                        // Redirect to the returned URL
+                        window.location.href = response.url;
+                    } else {
+                        console.error('Failed to sign in with GitHub:', response.statusText);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error signing in with GitHub:', error);
+                });
+        }
+    </script>
+</body>
+</html>

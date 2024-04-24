@@ -1,13 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2AuthorizationCodeBearer
 from fastapi.responses import RedirectResponse
-from sqlalchemy import create_engine, Column, String
+from sqlalchemy import create_engine, Column, String, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel
 import base64
 import requests
-
 
 app = FastAPI()
 oauth2_scheme_ua = OAuth2AuthorizationCodeBearer(
@@ -28,7 +27,8 @@ Base = declarative_base()
 
 class User(Base):
     __tablename__ = "users"
-    email = Column(String, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
     access_token = Column(String)
     provider = Column(String)
 
@@ -42,6 +42,20 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def check_user_login_status(db, access_token):
+    return db.query(User).filter(User.access_token == access_token).first()
+
+def validate_access_token(access_token):
+    # Implement token validation logic here (e.g., using OAuth2 introspection endpoint)
+    return True  # Placeholder, replace with actual token validation logic
+
+def register_user(db, email, access_token, provider):
+    user = User(email=email, access_token=access_token, provider=provider)
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
 
 @app.get("/")
 async def index():
@@ -91,7 +105,7 @@ async def callback_ua(code: str):
         
         # Store user information in the database
         db = SessionLocal()
-        db.add(User(email="dummy@example.com", access_token=access_token, refresh_token=refresh_token))
+        db.add(User(email="dummy@example.com", access_token=access_token, provider='ua'))
         db.commit()
         db.close()
         
@@ -131,16 +145,27 @@ async def callback_github(code: str):
         raise HTTPException(status_code=response.status_code, detail="Failed to obtain access token")
 
 @app.get("/authVeri")
-async def register(access_token: str = Depends(oauth2_scheme_ua)):
-    # Check if the user is already in the database
-    db = SessionLocal()
-    user = db.query(User).filter(User.access_token == access_token).first()
-    db.close()
-
+async def authenticate_user(access_token: str = Depends(oauth2_scheme_ua), db: Session = Depends(get_db)):
+    user = check_user_login_status(db, access_token)
     if user:
-        return {"message": "Welcome to the homepage!"}
+        return {"message": "Welcome to the homepage!", "user_id": user.id}
     else:
         return {"message": "Please register"}
+
+@app.post("/register")
+async def register_user_endpoint(email: str, access_token: str, provider: str, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.email == email).first()
+    if existing_user:
+        return {"message": "User already exists"}
+    user = register_user(db, email, access_token, provider)
+    return {"message": "User registered successfully", "user_id": user.id}
+
+@app.get("/token/validate")
+async def validate_token(access_token: str):
+    if validate_access_token(access_token):
+        return {"message": "Token is valid"}
+    else:
+        return {"message": "Token is invalid"}
 
 if __name__ == "__main__":
     import uvicorn
