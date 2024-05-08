@@ -9,3 +9,4 @@ passlib
 python-multipart
 fastapi_utilities
 httpx
+psycopg2

@@ -39,6 +39,21 @@ This guide outlines the steps to deploy your service using Docker containers.
 
 * Docker installed and running on your system. You can find installation instructions for your operating system on the official Docker website: [https://docs.docker.com/engine/install/](https://docs.docker.com/engine/install/)
 
+**Deploy with docker compose**
+
+
+```bash
+   docker compose up -d
+   ```
+* `-d or --detach`: This option is to run in Detached mode: Run containers in the background.
+* `--build	`: This option is to build images before starting containers
+
+To stop de containers you must run:
+
+```bash
+   docker compose down
+   ```
+
 **Building the Image**
 
 1. Navigate to the directory containing your service's code (where your Dockerfile resides).
@@ -64,6 +79,7 @@ This guide outlines the steps to deploy your service using Docker containers.
    * `--name mycontainer`: This option assigns a name to the container. You can choose a more descriptive name if preferred.
    * `-p 80:8000`: This option maps the container's port 8000 (where your service is likely listening) to the host machine's port 80. This allows you to access your service by visiting `http://localhost` in your web browser (assuming the container is running on the same machine).
    * `myimage`: This specifies the name of the Docker image you want to use to create the container.
+
 
 **Accessing Your Service**
 

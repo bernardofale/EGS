@@ -1,0 +1,42 @@
+version: "3.9"
+
+services:
+  notification_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    depends_on:
+      - postgres_notification_db
+      - cronjob_notification_service
+    container_name: "notification_service"
+    environment:
+      - DATABASE_URL=postgresql://postgres:my_password@postgres_notification_db:5432/notification_db
+    ports:
+    - "8080:8000"
+
+  cronjob_notification_service:
+    build:
+      context: .
+      dockerfile: Dockerfile.cronjob
+    depends_on:
+      - postgres_notification_db
+    container_name: "notification_service_cronjob"
+    environment:
+      - DATABASE_URL=postgresql://postgres:my_password@postgres_notification_db:5432/notification_db
+    ports:
+      - "8001:8000"
+
+  postgres_notification_db:
+      image: postgres:latest
+      environment:
+        POSTGRES_USER: postgres
+        POSTGRES_PASSWORD: my_password
+        POSTGRES_DB: notification_db
+      volumes:
+        - postgres_data:/var/lib/postgresql/data  # Persistent volume for data
+      ports:
+        - "5432:5432"  # Expose port 5432 from the container to the host
+      expose:
+        - 5432
+volumes:
+  postgres_data:  # Volume named "postgres_data"

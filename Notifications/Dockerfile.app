@@ -2,20 +2,20 @@
 FROM python:3.10
 
 # 
-WORKDIR /Notifications
+WORKDIR /notifications
 
 # 
-COPY ./requirements.txt /Notifications/requirements.txt
+COPY ./requirements.txt /notifications/requirements.txt
 
 # 
-RUN pip install --no-cache-dir --upgrade -r /Notifications/requirements.txt
+RUN pip install --no-cache-dir --upgrade -r /notifications/requirements.txt
 
 # 
-#COPY ./db /Notifications/db
-#COPY ./routers /Notifications/routers
-#COPY ./templates /Notifications/templates
-#COPY ./app.py /Notifications/app.py
-#COPY ./.env /Notifications/.env
+#COPY ./db /notifications/db
+#COPY ./routers /notifications/routers
+#COPY ./templates /notifications/templates
+#COPY ./app.py /notifications/app.py
+#COPY ./.env /notifications/.env
 COPY . .
 #
 
