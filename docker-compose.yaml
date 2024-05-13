@@ -70,6 +70,24 @@ services:
     expose:
       - 3306
 
+  meetings-docs-api:
+    build:
+      context: ./meetings
+      dockerfile: Dockerfile
+    container_name: "meetings-docs-api"
+    ports:
+      - "80:80"
+    depends_on:
+      - meetings_db
+  
+  meetings_db:
+    image: postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: example
+    ports:
+      - "5433:5432"
 
 volumes:
   postgres_data:  # Volume named "postgres_data"
