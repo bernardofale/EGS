@@ -50,7 +50,7 @@ services:
     depends_on:
       - todo_db
     environment:
-      - DATABASE_URL=postgresql://postgres:my_password@postgres_notification_db:5432/notification_db
+    - DATABASE_URL=mysql://docker:docker@todo_db:5432/exampledb
     volumes:
       - .:/app
 
