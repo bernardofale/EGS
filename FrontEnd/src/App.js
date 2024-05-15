@@ -1,16 +1,16 @@
+import { CssBaseline, ThemeProvider } from "@mui/material";
 import { useState } from "react";
-import { Routes, Route } from "react-router-dom";
-import Topbar from "./scenes/global/Topbar";
-import Sidebar from "./scenes/global/Sidebar";
+import { Route, Routes } from "react-router-dom";
+import Calendar from "./scenes/calendar/calendar";
 import Dashboard from "./scenes/dashboard";
-import Notifications from "./scenes/noti";
+import Documents from "./scenes/documents";
+import Sidebar from "./scenes/global/Sidebar";
+import Topbar from "./scenes/global/Topbar";
 import HumanResources from "./scenes/hr";
 import Meetings from "./scenes/meetings";
-import Documents from "./scenes/documents";
+import Notifications from "./scenes/noti";
 import Inventory from "./scenes/todo";
-import { CssBaseline, ThemeProvider } from "@mui/material";
 import { ColorModeContext, useMode } from "./theme";
-import Calendar from "./scenes/calendar/calendar";
 
 function App() {
   const [theme, colorMode] = useMode();
@@ -25,6 +25,7 @@ function App() {
           <main className="content">
             <Topbar setIsSidebar={setIsSidebar} />
             <Routes>
+              <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/noti" element={<Notifications />} />
               <Route path="/hr" element={<HumanResources />} />

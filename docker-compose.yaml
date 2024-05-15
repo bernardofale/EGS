@@ -39,6 +39,15 @@ services:
         - "5432:5432"  # Expose port 5432 from the container to the host
       expose:
         - 5432
+        
+  frontend:
+    build:
+      context: ./FrontEnd 
+      dockerfile: Dockerfile 
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./FrontEnd:/app" 
 
   todo_api:
     build:
