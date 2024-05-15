@@ -42,12 +42,10 @@ services:
         
   frontend:
     build:
-      context: ./FrontEnd 
-      dockerfile: Dockerfile 
+      context: ./FrontEnd
+      dockerfile: Dockerfile
     ports:
       - "3000:3000"
-    volumes:
-      - "./FrontEnd:/app" 
 
   todo_api:
     build:
