@@ -18,6 +18,8 @@ class Meeting(SQLModel, table=True):
     end_date: datetime = Field(default_factory=lambda: datetime.today())
     # User ID of the user that created the meeting / Owner of User ID
     created_by: str
+    # To-Do ID of the To-Do associated with the meeting
+    todo_id: str | None = None
     # List of attendees for the Meeting --
     # Actually not a column in the database
     attendees: List["MeetingAttendees"] = Relationship(
@@ -36,11 +38,13 @@ class Meeting(SQLModel, table=True):
 
 class MeetingAttendees(SQLModel, table=True):
     # GUID
-    id: int | None = Field(default=None, primary_key=True)
+    id: str = Field(default_factory=lambda: uuid4().hex, primary_key=True)
     # Meeting ID
     meeting_id: str = Field(foreign_key="meeting.id")
     # User ID of the user that will attend the meeting
     user_id: str
+    # Status of the attendee -> Accepted, Maybe, Pending, Declined
+    status: str = Field(default="pending")
     # Meeting object -- Actually not a column in the database
     meeting: Meeting = Relationship(back_populates="attendees")
 
@@ -56,7 +60,7 @@ class MeetingUpdate(BaseModel):
     location: str | None = None
     start_date: datetime
     end_date: datetime = Field(default_factory=lambda: datetime.today())
-    attendees: List[str]
+    attendees: List[MeetingAttendees]
 
     @validator("start_date", always=True)
     def start_date_cannot_be_in_the_past(cls, v):
@@ -71,7 +75,7 @@ class MeetingReceive(BaseModel):
     location: str | None = None
     start_date: datetime
     end_date: datetime
-    attendees: List[str]
+    attendees: List[MeetingAttendees]
     created_by: str
 
     @validator("start_date", always=True)

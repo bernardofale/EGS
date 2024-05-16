@@ -42,7 +42,8 @@ async def create_meeting(meeting: MeetingReceive) -> Meeting:
                        start_date=meeting.start_date,
                        end_date=meeting.end_date,
                        created_by=meeting.created_by)
-    attendees = [MeetingAttendees(meeting_id=new_meet.id, user_id=attendee)
+    attendees = [MeetingAttendees(meeting_id=new_meet.id,
+                                  user_id=attendee.user_id)
                  for attendee in meeting.attendees]
 
     with Session(engine) as session:
@@ -61,7 +62,9 @@ async def update_meeting(meeting_id: str, edit_meeting: MeetingUpdate):
         meeting = results.first()
         if meeting is None:
             raise HTTPException(status_code=404, detail="No meeting found")
-        attendees = [MeetingAttendees(meeting_id=meeting_id, user_id=attendee)
+        attendees = [MeetingAttendees(meeting_id=meeting_id,
+                                      user_id=attendee.user_id,
+                                      status=attendee.status)
                      for attendee in edit_meeting.attendees]
         meeting_attendees = session.exec(select(MeetingAttendees).
                                          where(MeetingAttendees.meeting_id ==

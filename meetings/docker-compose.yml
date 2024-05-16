@@ -3,7 +3,8 @@ version: '3.9'
 
 services:
 
-  db:
+  meetings_db:
+    container_name: meetings_db
     image: postgres
     restart: always
     # set shared memory limit when using docker-compose
@@ -18,11 +19,19 @@ services:
       POSTGRES_PASSWORD: example
     ports:
       - "5432:5432"
+  
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
 
   meetings-docs-api:
     image: meetings-docs-api 
     restart: always
+    environment:
+      - DATABASE_URL=postgresql://postgres:example@meetings_db:5432/postgres
     ports:
       - "80:80"
     depends_on:
-      - db
+      - meetings_db
