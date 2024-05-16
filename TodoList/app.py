@@ -57,7 +57,7 @@ class ToDoItem(Base):
     due_date = Column(Date)
 
 # Create SQLAlchemy engine and session
-SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://docker:docker@todo_db:3306/exampledb"
+SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://docker:docker@todo_db/exampledb"
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

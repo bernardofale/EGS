@@ -53,14 +53,15 @@ services:
       dockerfile: Dockerfile
     container_name: "todo_api"
     ports:
-      - '8081:8002'
+      - '8002:8002'
     depends_on:
       - todo_db
     environment:
-    - DATABASE_URL=mysql://docker:docker@todo_db:5432/exampledb
+    - DATABASE_URL=mysql://docker:docker@todo_db/exampledb
     volumes:
-      - ./FrontEnd:/app
+      - ./TodoList:/todo
 
+ 
   todo_db:
     image: mysql
     container_name: "todo_db"
