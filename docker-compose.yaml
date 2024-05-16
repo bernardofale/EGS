@@ -83,9 +83,9 @@ services:
       context: ./meetings
       dockerfile: Dockerfile
     container_name: "meetings-docs-api"
-    environment:
-      PG_USER: postgres
-      PG_PASSWORD: example
+    restart: always
+    environment: 
+      - DATABASE_URL=postgresql://postgres:example@meetings_db:5432/postgres
     ports:
       - "80:80"
     depends_on:
