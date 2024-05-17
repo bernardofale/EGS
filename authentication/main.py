@@ -4,23 +4,12 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import create_engine, Column, String, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import base64
 import requests
 
-app = FastAPI()
-oauth2_scheme_ua = OAuth2AuthorizationCodeBearer(
-    authorizationUrl="https://wso2-gw.ua.pt/authorize",
-    tokenUrl="https://wso2-gw.ua.pt/token",
-    scopes={"openid": "OpenID authentication"}
-)
-oauth2_scheme_github = OAuth2AuthorizationCodeBearer(
-    authorizationUrl="https://github.com/login/oauth/authorize",
-    tokenUrl="https://github.com/login/oauth/access_token",
-    scopes={"user": "User details"}
-)
-
-DATABASE_URL = "mysql+mysqlconnector://root:password@localhost:3307/auth"
+DATABASE_URL = "mysql+mysqlconnector://root:password@db:3306/auth"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
@@ -46,9 +35,18 @@ def get_db():
 def check_user_login_status(db, access_token):
     return db.query(User).filter(User.access_token == access_token).first()
 
-def validate_access_token(access_token):
-    # Implement token validation logic here (e.g., using OAuth2 introspection endpoint)
-    return True  # Placeholder, replace with actual token validation logic
+def validate_access_token(access_token, provider):
+    if provider == 'github':
+        headers = {
+            "Authorization": f"token {access_token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+        response = requests.get("https://api.github.com/user", headers=headers)
+        return response.status_code == 200
+    elif provider == 'ua':
+        # Implement token validation logic for UA provider
+        pass
+    return False
 
 def register_user(db, email, access_token, provider):
     user = User(email=email, access_token=access_token, provider=provider)
@@ -56,6 +54,23 @@ def register_user(db, email, access_token, provider):
     db.commit()
     db.refresh(user)
     return user
+
+app = FastAPI()
+
+oauth2_scheme_ua = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="https://wso2-gw.ua.pt/authorize",
+    tokenUrl="https://wso2-gw.ua.pt/token",
+    scopes={"openid": "OpenID authentication"}
+)
+oauth2_scheme_github = OAuth2AuthorizationCodeBearer(
+    authorizationUrl="https://github.com/login/oauth/authorize",
+    tokenUrl="https://github.com/login/oauth/access_token",
+    scopes={"user": "User details"}
+)
+
+@app.on_event("startup")
+async def startup_event():
+    Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 async def index():
@@ -84,7 +99,7 @@ async def signin_github():
     return RedirectResponse(url=authorization_url)
 
 @app.get("/callback/ua")
-async def callback_ua(code: str):
+async def callback_ua(code: str, db: Session = Depends(get_db)):
     client_id = "agh44RajMJcYvCIq3lSMrutfPJ0a"
     client_secret = "WJckU0FSb41rsJHLnFPYqBFvSZoa"
     redirect_uri = "http://localhost:5000"
@@ -104,17 +119,15 @@ async def callback_ua(code: str):
         token_type = token_data.get("token_type")
         
         # Store user information in the database
-        db = SessionLocal()
-        db.add(User(email="dummy@example.com", access_token=access_token, provider='ua'))
+        db.add(User(email="example@example.com", access_token=access_token, provider='ua'))
         db.commit()
-        db.close()
         
         return {"access_token": access_token}
     else:
         raise HTTPException(status_code=response.status_code, detail="Failed to obtain access token")
 
 @app.get("/callback/github")
-async def callback_github(code: str):
+async def callback_github(code: str, db: Session = Depends(get_db)):
     client_id = "ed07148229986602e861"
     client_secret = "5d7e5a7849a396f44c2dfd4cc59bf490fed0348b"
     redirect_uri = "http://localhost:8000/index"
@@ -124,21 +137,23 @@ async def callback_github(code: str):
         "code": code,
         "redirect_uri": redirect_uri,
     }
-    response = requests.post("https://github.com/login/oauth/access_token", data=data)
+    headers = {"Accept": "application/json"}
+    response = requests.post("https://github.com/login/oauth/access_token", data=data, headers=headers)
     if response.status_code == 200:
-        token_data = response.text
-        access_token = token_data.split("=")[1].split("&")[0]
-        
+        token_data = response.json()
+        access_token = token_data.get("access_token")
+
         # Fetch user details
         headers = {"Authorization": f"token {access_token}"}
         user_response = requests.get("https://api.github.com/user", headers=headers)
         user_data = user_response.json()
         
         # Store user information in the database
-        db = SessionLocal()
-        db.add(User(email=user_data['email'], access_token=access_token, provider='github'))
-        db.commit()
-        db.close()
+        email = user_data.get('email', f"{user_data['login']}@github.com")  # Handle cases where email is not provided
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            db.add(User(email=email, access_token=access_token, provider='github'))
+            db.commit()
         
         return {"access_token": access_token}
     else:
@@ -161,8 +176,8 @@ async def register_user_endpoint(email: str, access_token: str, provider: str, d
     return {"message": "User registered successfully", "user_id": user.id}
 
 @app.get("/token/validate")
-async def validate_token(access_token: str):
-    if validate_access_token(access_token):
+async def validate_token(access_token: str, provider: str):
+    if validate_access_token(access_token, provider):
         return {"message": "Token is valid"}
     else:
         return {"message": "Token is invalid"}
