@@ -1,11 +1,8 @@
 from fastapi import HTTPException, Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
-HELLOSIGN_API_KEY = os.getenv("HELLOSIGN_KEY")
+API_KEY = 'o3e17a9d25945d0d7d009ccd62a5a7816265d3c6ffa03334a85cfd74be10c55e7'
+HELLOSIGN_API_KEY = 'o878dfbff49eceb3431c5b405b8e318117418efd536c9f0a0cd8881ed13b305db'
 security = HTTPBearer()
 
 
