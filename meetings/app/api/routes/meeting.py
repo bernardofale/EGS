@@ -37,10 +37,11 @@ async def create_meeting(meeting: MeetingReceive) -> Meeting:
     # Pydantic validation will raise an error if the start_date is in the past
     # or the end_date is before the start_date
 
-    new_meet = Meeting(id=meeting.id, title=meeting.title,
+    new_meet = Meeting(title=meeting.title,
                        location=meeting.location,
                        start_date=meeting.start_date,
                        end_date=meeting.end_date,
+                       todo_id=meeting.todo_id,
                        created_by=meeting.created_by)
     attendees = [MeetingAttendees(meeting_id=new_meet.id,
                                   user_id=attendee.user_id)
@@ -75,6 +76,7 @@ async def update_meeting(meeting_id: str, edit_meeting: MeetingUpdate):
         meeting.location = edit_meeting.location
         meeting.start_date = edit_meeting.start_date
         meeting.end_date = edit_meeting.end_date
+        meeting.todo_id = edit_meeting.todo_id
         session.add_all(attendees)
         session.add(meeting)
         session.commit()

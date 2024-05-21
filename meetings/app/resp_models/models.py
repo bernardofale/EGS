@@ -55,12 +55,18 @@ class MeetingAttendees(SQLModel, table=True):
                                                   })
 
 
+class Attendees(BaseModel):
+    user_id: str
+    status: str = "pending"
+
+
 class MeetingUpdate(BaseModel):
     title: str
     location: str | None = None
     start_date: datetime
     end_date: datetime = Field(default_factory=lambda: datetime.today())
-    attendees: List[MeetingAttendees]
+    attendees: List[Attendees]
+    todo_id: str | None = None
 
     @validator("start_date", always=True)
     def start_date_cannot_be_in_the_past(cls, v):
@@ -70,12 +76,13 @@ class MeetingUpdate(BaseModel):
 
 
 class MeetingReceive(BaseModel):
-    id: str = Field(default_factory=lambda: uuid4().hex)
+    #id: str = Field(default_factory=lambda: uuid4().hex)
     title: str
     location: str | None = None
     start_date: datetime
     end_date: datetime
-    attendees: List[MeetingAttendees]
+    todo_id: str | None = None
+    attendees: List[Attendees]
     created_by: str
 
     @validator("start_date", always=True)
