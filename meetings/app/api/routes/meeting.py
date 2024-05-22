@@ -77,7 +77,8 @@ async def update_meeting(meeting_id: str, edit_meeting: MeetingUpdate):
         meeting.start_date = edit_meeting.start_date
         meeting.end_date = edit_meeting.end_date
         meeting.todo_id = edit_meeting.todo_id
-        session.add_all(attendees)
+        if len(attendees) > 0:
+            session.add_all(attendees)
         session.add(meeting)
         session.commit()
         session.refresh(meeting)

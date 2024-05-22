@@ -49,7 +49,7 @@ class ToDoItem(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     description = Column(Text, nullable=False)
-    meeting_id = Column(Integer)
+    meeting_id = Column(String(50))
     content = Column(Text, nullable=False)
     departamento_id = Column(Integer)
     priority = Column(Integer, default=1)
@@ -71,7 +71,7 @@ class ToDoItemCreate(BaseModel):
     description: str
     completed: bool = False
     priority: int = 1
-    meeting_id: int
+    meeting_id: str
     content: str
     departamento_id: int
     due_date: datetime

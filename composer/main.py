@@ -58,6 +58,24 @@ def create_todo(todo_data: dict, api_key: Optional[str] = Header(None)):
     return make_request(url, method="POST", params=todo_data, headers=headers)
 
 
+@app.post("/associate-todo", tags=["Todo"])
+def associate_todo_with_meeting(todo_id: int, meeting_id: str,
+                                todo_api_key: Optional[str] = Header(None),
+                                meeting_api_key: Optional[str] = Header(None)):
+
+    # Get the todo by id
+    todo = get_todo_by_id(todo_id, todo_api_key)
+    todo["meeting_id"] = meeting_id
+    del todo["id"]
+    update_todo(todo_id, todo, todo_api_key)
+    meeting = get_meeting(meeting_id, meeting_api_key)
+    meeting["todo_id"] = str(todo_id)
+    del meeting["id"]
+    del meeting["created_by"]
+    meeting["attendees"] = []
+    update_meeting(meeting_id, meeting, meeting_api_key)
+
+
 @app.get("/todos/{todo_id}", tags=["Todo"])
 def get_todo_by_id(todo_id: int, api_key: Optional[str] = Header(None)):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
@@ -105,6 +123,8 @@ def create_meeting(meeting_data: dict,
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
     meeting = make_request(url, method="POST", params=meeting_data,
                            headers=headers)
+    # Send notification /notifications
+
     return meeting
 
 
@@ -239,3 +259,6 @@ def download_document(document_id: str, api_key: Optional[str] = Header(None)):
     response.headers["Content-Disposition"] = f"attachment; filename={file_name}"
 
     return response
+
+
+# Notifications endpoints
