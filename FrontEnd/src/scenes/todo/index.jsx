@@ -1,25 +1,33 @@
-import React, { useState } from "react";
-import { Box, useTheme, Button, Typography, Chip } from "@mui/material";
-import Header from "../../components/Header";
-import Accordion from "@mui/material/Accordion";
-import AccordionSummary from "@mui/material/AccordionSummary";
-import AccordionDetails from "@mui/material/AccordionDetails";
+import DoneIcon from '@mui/icons-material/Done';
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
-import DoneIcon from '@mui/icons-material/Done';
 import UndoIcon from '@mui/icons-material/Undo';
+import { Box, Button, Chip, Typography, useTheme } from "@mui/material";
+import Accordion from "@mui/material/Accordion";
+import AccordionDetails from "@mui/material/AccordionDetails";
+import AccordionSummary from "@mui/material/AccordionSummary";
+import React, { useEffect, useState } from "react";
+import Header from "../../components/Header";
 import { tokens } from "../../theme";
 
 const ToDo = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
+  const [todo, settodo] = useState([]);
 
-  const [todo, settodo] = useState([
-    { id: 1, priority: 3, title: "Acabar de alterar o template", content: "Personalização total ao projeto", done: false },
-    { id: 2, priority: 2, title: "Adaptar para receber dados das api", content: "Use_effects e fetch", done: false },
-    { id: 3, priority: 4, title: "Tratar da autenticação", content: "Diferenciar o login por role", done: false }
-  ]);
+  useEffect(() => {
+    const fetchTodo = () => {
+      try {
+        const data = JSON.parse(process.env.REACT_APP_TODO);
+        settodo(data);
+      } catch (error) {
+        console.error("Erro ao buscar as tarefas:", error);
+      }
+    };
+
+    fetchTodo();
+  }, []);
 
   const sorttodoByPriority = () => {
     const sortedtodo = [...todo];
@@ -68,11 +76,11 @@ const ToDo = () => {
       <Box display="flex" justifyContent="center" mb={2}>
         <Button variant="contained" color="primary" style={{ border: '1px solid white', marginRight: '8px', opacity: 0.8 }}>Add Task</Button>
         <Button variant="contained" color="primary" style={{ border: '1px solid white', marginRight: '8px', opacity: 0.8 }} onClick={sorttodoByPriority}>Sort by Priority</Button>
-        <Button variant="contained" color="primary" style={{ border: '1px solid white', opacity: 0.8 }} onClick={sorttodoByName}>Sort by Name</Button>
+        <Button variant="contained" color="primary" style={{ border: '1px solid white', opacity: 0.8 }} onClick={sorttodoByName}>Sort by Title</Button>
       </Box>
 
-      {todo.map((task, index) => (
-        <Accordion key={index} defaultExpanded>
+      {todo.map((task) => (
+        <Accordion key={task.id} defaultExpanded>
           <AccordionSummary expandIcon={<ExpandMoreIcon />}>
             <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
               <Typography color={colors.greenAccent[500]} variant="h5">

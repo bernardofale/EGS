@@ -1,7 +1,6 @@
-import { useState } from "react";
-import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import FullCalendar from "@fullcalendar/react";
 import {
   Box,
   List,
@@ -10,6 +9,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import { useState } from "react";
 import Header from "../../components/Header";
 import { tokens } from "../../theme";
 

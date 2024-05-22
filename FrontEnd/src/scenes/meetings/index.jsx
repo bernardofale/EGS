@@ -1,5 +1,5 @@
+import { Box, Button, Grid, MenuItem, Select, TextField } from "@mui/material";
 import React, { useState } from "react";
-import { Box, Button, TextField, Select, MenuItem, Grid } from "@mui/material";
 import Header from "../../components/Header";
 
 const Meetings = () => {
@@ -12,7 +12,7 @@ const Meetings = () => {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
 
-  const addMeeting = () => {
+  const addMeeting = async () => {
     const newMeeting = {
       id: meetings.length + 1,
       title: meetingTitle,
@@ -20,15 +20,32 @@ const Meetings = () => {
       location: location,
       description: description,
     };
-    setMeetings([...meetings, newMeeting]);
-    // Reset form fields
-    setMeetingTitle("");
-    setDay("");
-    setMonth("");
-    setYear("");
-    setHour("");
-    setLocation("");
-    setDescription("");
+
+    try {
+      const response = await fetch("composer", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newMeeting),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create new meeting");
+      }
+
+      const createdMeeting = await response.json();
+      setMeetings([...meetings, createdMeeting]);
+      setMeetingTitle("");
+      setDay("");
+      setMonth("");
+      setYear("");
+      setHour("");
+      setLocation("");
+      setDescription("");
+    } catch (error) {
+      console.error("Erro ao adicionar a reunião:", error);
+    }
   };
 
   return (

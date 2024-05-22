@@ -1,9 +1,9 @@
-import { Box, IconButton, useTheme, Dialog, DialogTitle, DialogContent, DialogActions, Button } from "@mui/material";
+import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
+import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, useTheme } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { tokens } from "../../theme";
-import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-import PersonOutlinedIcon from "@mui/icons-material/PersonOutlined";
 
 const Topbar = () => {
   const theme = useTheme();

@@ -97,24 +97,11 @@ const Sidebar = () => {
               <Box display="flex" justifyContent="center" alignItems="center">
                 <img
                   alt="profile-user"
-                  width="100px"
-                  height="100px"
-                  src={`../../assets/user.png`}
-                  style={{ cursor: "pointer", borderRadius: "50%" }}
+                  width="250px"
+                  height="200px"
+                  src={`../../assets/logo.png`}
+                  style={{ cursor: "pointer", borderRadius: "10%" }}
                 />
-              </Box>
-              <Box textAlign="center">
-                <Typography
-                  variant="h2"
-                  color={colors.grey[100]}
-                  fontWeight="bold"
-                  sx={{ m: "10px 0 0 0" }}
-                >
-                  Ana Silva
-                </Typography>
-                <Typography variant="h5" color={colors.greenAccent[500]}>
-                  Admin
-                </Typography>
               </Box>
             </Box>
           )}
