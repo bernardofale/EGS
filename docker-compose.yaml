@@ -101,6 +101,33 @@ services:
     ports:
       - "5433:5432"
 
+  auth_api:
+    build:
+      context: ./authentication
+      dockerfile: Dockerfile
+    container_name: "auth_api"
+    ports:
+      - "8003:8003"
+    depends_on:
+      - auth_db
+    environment:
+      DATABASE_URL: "mysql+mysqlconnector://root:password@auth_db/auth"
+
+  auth_db:
+    image: mysql:8.0.37
+    container_name: "auth_db"
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: auth
+    ports:
+      - "3308:3308" 
+    volumes:
+      - db_data:/var/lib/mysql
+    expose:
+      - 3308
+
 volumes:
   postgres_data:  # Volume named "postgres_data"
   db-photo-upload-service: # Volume todo_database
+  db_data:

@@ -9,17 +9,17 @@ from pydantic import BaseModel
 import base64
 import requests
 
-DATABASE_URL = "mysql+mysqlconnector://root:password@db:3306/auth"
+DATABASE_URL = "mysql+mysqlconnector://root:password@auth_db/auth"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 class User(Base):
-    __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    access_token = Column(String)
-    provider = Column(String)
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True)
+    username = Column(String(50), unique=True)  # Mudei isto (Nuno) atribui um valor especifico pq estav a dar erro
+    email = Column(String(120), unique=True)    # Mudei isto (Nuno) atribui um valor especifico pq estav a dar erro
+    provider = Column(String(50))  # Mudei isto (Nuno) atribui um valor especifico pq estav a dar erro
 
 class Token(BaseModel):
     access_token: str

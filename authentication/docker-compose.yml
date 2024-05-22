@@ -8,18 +8,18 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: auth
     ports:
-      - "3306:3306"
+      - "3308:3308"
     volumes:
       - db_data:/var/lib/mysql
       
   api:
     build: .
     ports:
-      - '8000:8000'
+      - '8003:8000'
     depends_on:
       - db
     environment:
-      DATABASE_URL: "mysql+mysqlconnector://root:password@db:3306/auth"
+      DATABASE_URL: "mysql+mysqlconnector://root:password@db:3308/auth"
 
 volumes:
   db_data:
