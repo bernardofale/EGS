@@ -66,7 +66,7 @@ services:
     image: mysql
     container_name: "todo_db"
     ports:
-      - 3306:3306
+      - 3307:3307
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: docker
@@ -76,7 +76,7 @@ services:
     volumes:
       - db-photo-upload-service:/var/lib/mysql
     expose:
-      - 3306
+      - 3307
 
   meetings-docs-api:
     build:
