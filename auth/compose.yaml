@@ -1,0 +1,23 @@
+services:
+
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=bernardofale
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+  
+  auth-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - mongodb
+    environment:
+      - DATABASE_URL=mongodb://bernardofale:admin@mongodb:27017 
+  
+  
