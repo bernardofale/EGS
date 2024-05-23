@@ -200,28 +200,8 @@ async def get_todo_by_id(
 
 
 @app.put('/v1/todos/{todo_id}', tags=["To-Do"])
-async def update_todo(todo_id: int, todo_item: ToDoItemCreate):
-    try:
-        db = SessionLocal()
-        db_todo = db.query(ToDoItem).filter(ToDoItem.id == todo_id).first()
-        if db_todo:
-            db_todo.description = todo_item.description
-            db_todo.completed = todo_item.completed
-            db_todo.due_date = todo_item.due_date
-            db.commit()
-            return {"message": "To-Do item updated successfully"}
-        else:
-            raise HTTPException(status_code=404, detail="To-Do item not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update To-Do item: {str(e)}")
-    finally:
-        db.close()
-
-
-@app.put('/v1/todos/{todo_id}', tags=["To-Do"])
 async def update_todo(todo_id: int, todo_item: ToDoItemCreate,
- _: None = Depends(validate_api_key)  # Using the dependency here
-):
+                      _: None = Depends(validate_api_key)):
     try:
         db = SessionLocal()
         db_todo = db.query(ToDoItem).filter(ToDoItem.id == todo_id).first()
@@ -229,6 +209,10 @@ async def update_todo(todo_id: int, todo_item: ToDoItemCreate,
             db_todo.description = todo_item.description
             db_todo.completed = todo_item.completed
             db_todo.due_date = todo_item.due_date
+            db_todo.content = todo_item.content
+            db_todo.priority = todo_item.priority
+            if todo_item.meeting_id:
+                db_todo.meeting_id = todo_item.meeting_id  # Atualizando o campo meeting_id se for fornecido
             db.commit()
             return {"message": "To-Do item updated successfully"}
         else:
@@ -237,8 +221,6 @@ async def update_todo(todo_id: int, todo_item: ToDoItemCreate,
         raise HTTPException(status_code=500, detail=f"Failed to update To-Do item: {str(e)}")
     finally:
         db.close()
-
-
 
 
 @app.delete('/v1/todos/{todo_id}', tags=["To-Do"])

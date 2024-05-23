@@ -2,7 +2,8 @@ from typing import Optional
 from fastapi import FastAPI, HTTPException, Header, UploadFile, File
 from fastapi.responses import StreamingResponse
 import requests
-
+from models.models import ToDoItemCreate
+import json
 
 app = FastAPI()
 
@@ -52,10 +53,11 @@ def get_todos(completed: Optional[bool] = None,
 
 
 @app.post("/todos", tags=["Todo"])
-def create_todo(todo_data: dict, api_key: Optional[str] = Header(None)):
+def create_todo(todo_data: ToDoItemCreate, api_key: Optional[str] = Header(None)):
     url = f"{todo_service_url}/v1/todos"
+    todo_data.due_date = todo_data.due_date.isoformat()
     headers = {"api-key": api_key} if api_key else None
-    return make_request(url, method="POST", params=todo_data, headers=headers)
+    return make_request(url, method="POST", params=todo_data.dict(), headers=headers)
 
 
 @app.post("/associate-todo", tags=["Todo"])
@@ -84,11 +86,12 @@ def get_todo_by_id(todo_id: int, api_key: Optional[str] = Header(None)):
 
 
 @app.put("/todos/{todo_id}", tags=["Todo"])
-def update_todo(todo_id: int, todo_data: dict,
+def update_todo(todo_id: int, todo_data: ToDoItemCreate,
                 api_key: Optional[str] = Header(None)):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
+    todo_data.due_date = todo_data.due_date.isoformat()
     headers = {"api-key": api_key} if api_key else None
-    return make_request(url, method="PUT", params=todo_data, headers=headers)
+    return make_request(url, method="PUT", params=todo_data.dict(), headers=headers)
 
 
 @app.delete("/todos/{todo_id}", tags=["Todo"])
