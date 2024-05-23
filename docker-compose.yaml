@@ -102,29 +102,25 @@ services:
 
   auth_api:
     build:
-      context: ./authentication
+      context: ./auth2
       dockerfile: Dockerfile
-    container_name: "auth_api"
+    container_name: "auth-api"
     ports:
-      - "8003:8003"
+      - "8003:80"
     depends_on:
       - auth_db
     environment:
-      DATABASE_URL: "mysql+mysqlconnector://root:password@auth_db/auth"
+      - DATABASE_URL=mongodb://bernardofale:admin@auth_db:27017
 
   auth_db:
-    image: mysql:8.0.37
+    image: mongo
     container_name: "auth_db"
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: auth
     ports:
-      - "3308:3308" 
-    volumes:
-      - db_data:/var/lib/mysql
-    expose:
-      - 3308
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=bernardofale
+      - MONGO_INITDB_ROOT_PASSWORD=admin
+  
 
 volumes:
   postgres_data:  # Volume named "postgres_data"
