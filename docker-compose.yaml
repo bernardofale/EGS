@@ -57,16 +57,15 @@ services:
     depends_on:
       - todo_db
     environment:
-    - DATABASE_URL=mysql://docker:docker@todo_db/exampledb
+    - DATABASE_URL=mysql://docker:docker@todo_db:3306/exampledb
     volumes:
       - ./TodoList:/todo
 
- 
   todo_db:
     image: mysql
     container_name: "todo_db"
     ports:
-      - 3307:3307
+      - 3306:3306
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: docker
@@ -76,7 +75,7 @@ services:
     volumes:
       - db-photo-upload-service:/var/lib/mysql
     expose:
-      - 3307
+      - 3306
 
   meetings-docs-api:
     build:
