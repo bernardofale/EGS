@@ -16,15 +16,13 @@ app = APIRouter()
 
 @app.post("/upload", status_code=201)
 async def upload_document(user_id: str,
-                          meeting_id: str,
                           file: UploadFile = File(...)):
     # Mock function to upload document to the database
     new_doc = Document(name=file.filename,
                        content_type=file.content_type,
                        content=bytes(file.file.read()),
                        signed=False,
-                       uploaded_by=user_id,
-                       meeting_id=meeting_id)
+                       uploaded_by=user_id)
     with Session(engine) as session:
         session.add(new_doc)
         session.commit()
@@ -33,8 +31,7 @@ async def upload_document(user_id: str,
                             name=new_doc.name,
                             content_type=new_doc.content_type,
                             signed=False,
-                            uploaded_by=new_doc.uploaded_by,
-                            meeting_id=new_doc.meeting_id)
+                            uploaded_by=new_doc.uploaded_by)
 
 
 @app.get("/", status_code=200)
@@ -51,8 +48,8 @@ async def get_all_documents(user_id: str = Query(None)):
                                  name=doc.name,
                                  content_type=doc.content_type,
                                  signed=doc.signed,
-                                 uploaded_by=doc.uploaded_by,
-                                 meeting_id=doc.meeting_id) for doc in results]
+                                 uploaded_by=doc.uploaded_by)
+                for doc in results]
         return docs
 
 
@@ -82,25 +79,6 @@ async def get_document(background_tasks: BackgroundTasks,
             return FileResponse(temp_file.name,
                                 media_type=results.content_type,
                                 filename=results.name)
-
-
-@app.get("/m/{meeting_id}", status_code=200)
-async def get_documents_by_meeting(meeting_id: str):
-    # Function to retrieve all documents of a meeting from the database
-    with Session(engine) as session:
-        results = session.exec(select(Document).where(Document.meeting_id ==
-                                                      meeting_id)).all()
-        if len(results) == 0:
-            raise HTTPException(status_code=404,
-                                detail="ERROR: No documents found for this \
-                                meeting")
-        docs = [DocumentResponse(id=doc.id,
-                                 name=doc.name,
-                                 content_type=doc.content_type,
-                                 signed=doc.signed,
-                                 uploaded_by=doc.uploaded_by,
-                                 meeting_id=doc.meeting_id) for doc in results]
-        return docs
 
 
 @app.delete("/{document_id}", status_code=204)

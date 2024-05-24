@@ -77,11 +77,11 @@ services:
     expose:
       - 3306
 
-  meetings-docs-api:
+  meetings-api:
     build:
       context: ./meetings
       dockerfile: Dockerfile
-    container_name: "meetings-docs-api"
+    container_name: "meetings-api"
     restart: always
     environment: 
       - DATABASE_URL=postgresql://postgres:example@meetings_db:5432/postgres
@@ -99,6 +99,36 @@ services:
       POSTGRES_PASSWORD: example
     ports:
       - "5433:5432"
+
+  documents-api:
+    build:
+      context: ./documents
+      dockerfile: Dockerfile
+    container_name: "documents-api"
+    restart: always
+    environment: 
+      - DATABASE_URL=postgresql://postgres:example@documents_db:5432/postgres
+    ports:
+      - "81:80"
+    depends_on:
+        - documents_db
+
+  documents_db:
+    container_name: documents_db
+    image: postgres
+    restart: always
+    # set shared memory limit when using docker-compose
+    shm_size: 128mb
+    # or set shared memory limit when deploy via swarm stack
+    #volumes:
+    #  - type: tmpfs
+    #    target: /dev/shm
+    #    tmpfs:
+    #      size: 134217728 # 128*2^20 bytes = 128Mb
+    environment:
+      POSTGRES_PASSWORD: example
+    ports:
+      - "5434:5432"
 
   auth_api:
     build:
