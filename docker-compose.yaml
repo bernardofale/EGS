@@ -10,6 +10,13 @@ services:
       - cronjob_notification_service
     container_name: "notification_service"
     environment:
+      - MAIL_USERNAME=egs.2024@outlook.com
+      -  MAIL_PASSWORD=Egs_2024Notify!
+      -  MAIL_FROM=egs.2024@outlook.com
+      -  MAIL_PORT=587
+      -  MAIL_SERVER=smtp-mail.outlook.com
+      -  MAIL_FROM_NAME=Notify
+      -  TOKEN=6942311486:AAHzFqxWOuM7eeRSs_K40Ih0S0XtHVfL01s
       - DATABASE_URL=postgresql://postgres:my_password@postgres_notification_db:5432/notification_db
     ports:
     - "8080:8000"

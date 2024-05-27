@@ -1,0 +1,123 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-api
+  namespace: egs-docmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-api
+  template:
+    metadata:
+      labels:
+        app: todo-api
+    spec:
+      containers:
+      - name: todo-api
+        image: registry.deti/egs-docmanager/todon:v1
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8002
+        env:
+        - name: DATABASE_URL
+          value: "mysql://docker:docker@todo-db:3306/exampledb"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-api
+  namespace: egs-docmanager
+spec:
+  ports:
+    - port: 8002
+      targetPort: 8002
+  selector:
+    app: todo-api
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-db
+  namespace: egs-docmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-db
+  template:
+    metadata:
+      labels:
+        app: todo-db
+    spec:
+      containers:
+      - image: mysql
+        name: todo-db
+        ports:
+        - containerPort: 3306
+          name: mysql
+        volumeMounts:
+          - name: mysql-persistent-storage
+            mountPath: /var/lib/mysql
+        env: 
+        - name: MYSQL_ROOT_PASSWORD
+          value: root
+        - name: MYSQL_DATABASE
+          value: exampledb
+        - name: MYSQL_USER
+          value: docker
+        - name: MYSQL_PASSWORD
+          value: docker
+        - name: DATABASE_URL
+          value: "mysql://docker:docker@todo-db:3306/exampledb"
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: todo-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: todo-db
+  namespace: egs-docmanager
+spec:
+  ports:
+    - port: 3306
+      targetPort: 3306  
+  selector:
+    app: todo-db
+  type: NodePort
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todo-api-k3s
+  namespace: egs-docmanager
+  annotations:
+    kubernetes.io/ingress.class: traefik
+    traefik.ingress.kubernetes.io/frontend-entry-points: http,https
+    traefik.ingress.kubernetes.io/redirect-entry-point: https
+    traefik.ingress.kubernetes.io/redirect-permanent: "true"
+spec:
+  rules:
+  - host: grupo7-egs-deti.ua.pt
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: todo-api
+            port: 
+              number: 8002
+
