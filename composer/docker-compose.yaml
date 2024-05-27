@@ -1,0 +1,9 @@
+version: '3.9'
+
+services:
+  
+    composer-db:
+      image: redis
+      restart: always
+      ports:
+        - "6379:6379"

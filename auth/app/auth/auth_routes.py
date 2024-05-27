@@ -2,11 +2,10 @@ from fastapi import APIRouter, Depends, Response, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from app.crud.crud_ops import insert_user, get_user, authenticate_user
 from app.resp_models.model import Token, UserInDB, User
-from datetime import datetime, timedelta
-from decouple import config
 from app.auth.gen_tokens import create_access_token
 from app.auth.gen_tokens import oauth2_scheme, TokenData
 from jose import jwt, JWTError
+from datetime import timedelta
 
 
 router = APIRouter(
@@ -19,7 +18,7 @@ JWT_ALGORITHM = "HS256"
 
 
 @router.get("/verify")
-async def verify_user(token: str = Depends(oauth2_scheme)):
+async def verify_user(token: str):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
