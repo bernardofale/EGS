@@ -17,10 +17,9 @@ class Envs:
     MAIL_FROM = os.getenv('MAIL_FROM')
     MAIL_PORT = int(os.getenv('MAIL_PORT'))
     MAIL_SERVER = os.getenv('MAIL_SERVER')
-    MAIL_FROM_NAME = os.getenv('MAIN_FROM_NAME')
+    MAIL_FROM_NAME = os.getenv('MAIL_FROM_NAME')
 
 class EmailSchema(BaseModel):
-    name: str | None = ""
     subject: str | None = ""
     recipients: list | str
     cc: list | None = []
@@ -81,7 +80,6 @@ async def send_email_asynchronous(email_body: Annotated[
                 "summary": "A Normal Example",
                 "description": "A **normal** item works correctly.",
                 "value": {
-                        "name": "Filipe Vale",
                         "subject": "Teste",
                         "recipients": "fmmvale@hotmail.com",
                         "body": "Hello, this is a test",
@@ -91,7 +89,6 @@ async def send_email_asynchronous(email_body: Annotated[
                 "summary": "A Full Example",
                 "description": "A **Full** item works correctly.",
                 "value": {
-                        "name": "Filipe Vale",
                         "subject": "Test Email",
                         "recipients": "fmmvale@hotmail.com",
                         "body": "<html><body>Hello,<p>this is a test.</p></body></html>",
