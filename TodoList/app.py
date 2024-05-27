@@ -169,14 +169,18 @@ async def create_todo(
     todo_item: ToDoItemCreate,
     _: None = Depends(validate_api_key)  # Using the dependency here
 ):
+    todo_item.meeting_id = "0"
     try:
         db = SessionLocal()
         db_todo = ToDoItem(**todo_item.dict())
         db.add(db_todo)
         db.commit()
-        return {"message": "To-Do item created successfully"}
+        db.refresh(db_todo)
+        return {"id": db_todo.id,
+                "message": "To-Do item created successfully"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create To-Do item: {str(e)}")
+        raise HTTPException(status_code=500,
+                            detail=f"Failed to create To-Do item: {str(e)}")
     finally:
         db.close()
 

@@ -1,27 +1,38 @@
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Header, UploadFile, File
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Depends, \
+    Response, Cookie
 from fastapi.responses import StreamingResponse
+from fastapi.security import OAuth2PasswordRequestForm
 import requests
 from models.models import ToDoItemCreate
+from models.auth_model import UserInDB
+import redis
 import json
 
 app = FastAPI()
 
+session = requests.Session()
+
+# Connect to redis
+r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 todo_service_url = "http://0.0.0.0:8002"
-meetings_service_url = "http://0.0.0.0:80"  # + Docs API
+meetings_service_url = "http://0.0.0.0:80"
+docs_service_url = "http://0.0.0.0:81"
 notifications_service_url = "http://0.0.0.0:8000"
+auth_service_url = "http://0.0.0.0:8003"
 
 
 # Helper function to make requests
-def make_request(url, method="GET", params=None, data=None, headers=None):
+def make_request(url, method="GET", params=None, data=None,
+                 headers=None,
+                 files=None):
     try:
         if method == "GET":
             response = requests.get(url, params=params, headers=headers)
-            print(response.request.url)
-            print(response.request.headers)
         elif method == "POST":
-            response = requests.post(url, files=data, json=params, headers=headers)
+            response = requests.post(url, data=data, json=params,
+                                     headers=headers, files=files)
         elif method == "PUT":
             response = requests.put(url, json=params, headers=headers)
         elif method == "DELETE":
@@ -30,75 +41,146 @@ def make_request(url, method="GET", params=None, data=None, headers=None):
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException:
-        raise HTTPException(status_code=500,
+        raise HTTPException(status_code=response.status_code,
                             detail=response.json())
+
+# Auth endpoints
+@app.post("/register", tags=["Auth"])
+def register(user: UserInDB):
+    url = f"{auth_service_url}/auth/register"
+    return make_request(url, method="POST", params=user.dict())
+
+
+@app.post("/login", tags=["Auth"])
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    url = f"{auth_service_url}/auth/"
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    print(form_data.username + " " + form_data.password)
+    data = {
+        'grant_type': form_data.grant_type,
+        'username': form_data.username,
+        'password': form_data.password,
+        'scope': form_data.scopes,
+        'client_id': form_data.client_id,
+        'client_secret': form_data.client_secret
+    }
+    r = make_request(url, method="POST", headers=headers,
+                     data=data)
+    response = Response(content=json.dumps(r))
+    response.set_cookie(key="access_token", value=r["access_token"])
+    return response
+
+
+# @app.get("/verify", tags=["Auth"])
+def verify_token(token: str):
+    url = f"{auth_service_url}/auth/verify"
+    params = {"token": token}
+    return make_request(url, params=params)
+
+
+@app.get("/users/me", tags=["Auth"])
+def get_user(token: str):
+    url = f"{auth_service_url}/users/me"
+    verify_token(token)
+    headers = {"Authorization": f"Bearer {token}"}
+    return make_request(url, headers=headers)
 
 
 # Todo endpoints
 @app.get("/todos", tags=["Todo"])
-def get_todos(completed: Optional[bool] = None,
+def get_todos(token: str,
+              completed: Optional[bool] = None,
               priority: Optional[int] = None,
               due_date: Optional[str] = None,
               sort_by_due_date: Optional[str] = None,
               api_key: Optional[str] = Header(None)):
-    url = f"{todo_service_url}/v1/todos"
-    params = {
-        "completed": completed,
-        "priority": priority,
-        "due_date": due_date,
-        "sort_by_due_date": sort_by_due_date
-    }
-    headers = {"api-key": api_key} if api_key else None
-    return make_request(url, params=params, headers=headers)
+    u = verify_token(token)
+    user_key = "user:" + str(u["id"]) + ":todos"
+    todo_ids = r.smembers(user_key)
+    print(todo_ids)
+    d = {}
+    for todo_id in todo_ids:
+        id = todo_id.split(":")[1]
+        d[id] = get_todo_by_id(token, id, api_key)
+    return d
 
 
 @app.post("/todos", tags=["Todo"])
-def create_todo(todo_data: ToDoItemCreate, api_key: Optional[str] = Header(None)):
+def create_todo(token: str,
+                todo_data: ToDoItemCreate,
+                api_key: Optional[str] = Header(None)):
     url = f"{todo_service_url}/v1/todos"
+    u = verify_token(token)
     todo_data.due_date = todo_data.due_date.isoformat()
     headers = {"api-key": api_key} if api_key else None
-    return make_request(url, method="POST", params=todo_data.dict(), headers=headers)
+    rsp = make_request(url, method="POST", params=todo_data.dict(),
+                       headers=headers)
+    todo_id = "todo:" + str(rsp["id"])
+    user_key = "user:" + str(u["id"]) + ":todos"
+    r.sadd(user_key, todo_id)
+    return rsp
 
 
 @app.post("/associate-todo", tags=["Todo"])
-def associate_todo_with_meeting(todo_id: int, meeting_id: str,
+def associate_todo_with_meeting(token: str,
+                                todo_id: int,
+                                meeting_id: str,
                                 todo_api_key: Optional[str] = Header(None),
                                 meeting_api_key: Optional[str] = Header(None)):
-
-    # Get the todo by id
-    todo = get_todo_by_id(todo_id, todo_api_key)
-    todo["meeting_id"] = meeting_id
-    del todo["id"]
-    update_todo(todo_id, todo, todo_api_key)
-    meeting = get_meeting(meeting_id, meeting_api_key)
-    meeting["todo_id"] = str(todo_id)
-    del meeting["id"]
-    del meeting["created_by"]
-    meeting["attendees"] = []
-    update_meeting(meeting_id, meeting, meeting_api_key)
+    u = verify_token(token)
+    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+        meeting_key = "meeting:" + meeting_id
+        r.sadd(meeting_key, "todo:" + str(todo_id))
+    return {"todo_id": todo_id,
+            "meeting_id": meeting_id,
+            "message": "Todo associated with meeting"}
 
 
 @app.get("/todos/{todo_id}", tags=["Todo"])
-def get_todo_by_id(todo_id: int, api_key: Optional[str] = Header(None)):
+def get_todo_by_id(token: str,
+                   todo_id: int,
+                   api_key: Optional[str] = Header(None)):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
-    headers = {"api-key": api_key} if api_key else None
-    return make_request(url, headers=headers)
+    u = verify_token(token)
+    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+        headers = {"api-key": api_key} if api_key else None
+        return make_request(url, headers=headers)
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 @app.put("/todos/{todo_id}", tags=["Todo"])
-def update_todo(todo_id: int, todo_data: ToDoItemCreate,
+def update_todo(todo_id: int,
+                token: str,
+                todo_data: ToDoItemCreate,
                 api_key: Optional[str] = Header(None)):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
-    todo_data.due_date = todo_data.due_date.isoformat()
-    headers = {"api-key": api_key} if api_key else None
-    return make_request(url, method="PUT", params=todo_data.dict(), headers=headers)
+    u = verify_token(token)
+    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+        todo_data.due_date = todo_data.due_date.isoformat()
+        headers = {"api-key": api_key} if api_key else None
+        return make_request(url, method="PUT",
+                            params=todo_data.dict(),
+                            headers=headers)
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 @app.delete("/todos/{todo_id}", tags=["Todo"])
-def delete_todo(todo_id: int, api_key: Optional[str] = Header(None)):
+def delete_todo(token: str,
+                todo_id: int,
+                api_key: Optional[str] = Header(None)):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
-    headers = {"api-key": api_key} if api_key else None
-    return make_request(url, method="DELETE", headers=headers)
+    u = verify_token(token)
+    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+        headers = {"api-key": api_key} if api_key else None
+        r.srem("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id))
+        return make_request(url, method="DELETE", headers=headers)
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 # Meetings endpoints
