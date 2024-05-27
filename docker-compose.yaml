@@ -139,7 +139,7 @@ services:
 
   auth_api:
     build:
-      context: ./auth2
+      context: ./auth
       dockerfile: Dockerfile
     container_name: "auth-api"
     ports:
