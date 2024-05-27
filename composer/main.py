@@ -1,24 +1,35 @@
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Depends, \
-    Response, Cookie
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, \
+    Depends, Response
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 import requests
 from models.models import ToDoItemCreate
 from models.auth_model import UserInDB
+from models import meeting_models
+from models import documents_models
 import redis
 import json
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
-
-session = requests.Session()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Connect to redis
 r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
 
 todo_service_url = "http://0.0.0.0:8002"
+todo_api_key = "CGtZ10f6JytK0EOMeuI6noSfZEmDowqn"
 meetings_service_url = "http://0.0.0.0:80"
+meetings_api_key = "3e17a9d25945d0d7d009ccd62a5a7816265d3c6ffa03334a85cfd74be10c55e7"
 docs_service_url = "http://0.0.0.0:81"
+docs_api_key = "19e33835-b178-4ff9-98d5-6d5cf7ef15c0"
 notifications_service_url = "http://0.0.0.0:8000"
 auth_service_url = "http://0.0.0.0:8003"
 
@@ -59,7 +70,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
         'accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
     }
-    print(form_data.username + " " + form_data.password)
     data = {
         'grant_type': form_data.grant_type,
         'username': form_data.username,
@@ -96,8 +106,7 @@ def get_todos(token: str,
               completed: Optional[bool] = None,
               priority: Optional[int] = None,
               due_date: Optional[str] = None,
-              sort_by_due_date: Optional[str] = None,
-              api_key: Optional[str] = Header(None)):
+              sort_by_due_date: Optional[str] = None):
     u = verify_token(token)
     user_key = "user:" + str(u["id"]) + ":todos"
     todo_ids = r.smembers(user_key)
@@ -105,18 +114,17 @@ def get_todos(token: str,
     d = {}
     for todo_id in todo_ids:
         id = todo_id.split(":")[1]
-        d[id] = get_todo_by_id(token, id, api_key)
+        d[id] = get_todo_by_id(token, id, todo_api_key)
     return d
 
 
 @app.post("/todos", tags=["Todo"])
 def create_todo(token: str,
-                todo_data: ToDoItemCreate,
-                api_key: Optional[str] = Header(None)):
+                todo_data: ToDoItemCreate):
     url = f"{todo_service_url}/v1/todos"
     u = verify_token(token)
     todo_data.due_date = todo_data.due_date.isoformat()
-    headers = {"api-key": api_key} if api_key else None
+    headers = {"api-key": todo_api_key}
     rsp = make_request(url, method="POST", params=todo_data.dict(),
                        headers=headers)
     todo_id = "todo:" + str(rsp["id"])
@@ -128,26 +136,41 @@ def create_todo(token: str,
 @app.post("/associate-todo", tags=["Todo"])
 def associate_todo_with_meeting(token: str,
                                 todo_id: int,
-                                meeting_id: str,
-                                todo_api_key: Optional[str] = Header(None),
-                                meeting_api_key: Optional[str] = Header(None)):
+                                meeting_id: str):
     u = verify_token(token)
     if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
         meeting_key = "meeting:" + meeting_id
+        for key in r.scan_iter("meeting:*"):
+            # Check if the value is a member of the Set
+            if r.sismember(key, "todo:" + str(todo_id)):
+                # Remove the value from the Set
+                r.srem(key, "todo:" + str(todo_id))
         r.sadd(meeting_key, "todo:" + str(todo_id))
     return {"todo_id": todo_id,
             "meeting_id": meeting_id,
             "message": "Todo associated with meeting"}
 
 
+@app.get("/todos/meeting/{meeting_id}", tags=["Todo"])
+def get_todos_by_meeting(token: str,
+                         meeting_id: str):
+    verify_token(token)
+    meeting_key = "meeting:" + meeting_id
+    todo_ids = r.smembers(meeting_key)
+    d = {}
+    for todo_id in todo_ids:
+        id = todo_id.split(":")[1]
+        d[id] = get_todo_by_id(token, id, todo_api_key)
+    return d
+
+
 @app.get("/todos/{todo_id}", tags=["Todo"])
 def get_todo_by_id(token: str,
-                   todo_id: int,
-                   api_key: Optional[str] = Header(None)):
+                   todo_id: int):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
     u = verify_token(token)
     if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
-        headers = {"api-key": api_key} if api_key else None
+        headers = {"api-key": todo_api_key}
         return make_request(url, headers=headers)
     else:
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -156,13 +179,12 @@ def get_todo_by_id(token: str,
 @app.put("/todos/{todo_id}", tags=["Todo"])
 def update_todo(todo_id: int,
                 token: str,
-                todo_data: ToDoItemCreate,
-                api_key: Optional[str] = Header(None)):
+                todo_data: ToDoItemCreate):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
     u = verify_token(token)
     if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
         todo_data.due_date = todo_data.due_date.isoformat()
-        headers = {"api-key": api_key} if api_key else None
+        headers = {"api-key": todo_api_key}
         return make_request(url, method="PUT",
                             params=todo_data.dict(),
                             headers=headers)
@@ -172,13 +194,19 @@ def update_todo(todo_id: int,
 
 @app.delete("/todos/{todo_id}", tags=["Todo"])
 def delete_todo(token: str,
-                todo_id: int,
-                api_key: Optional[str] = Header(None)):
+                todo_id: int):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
     u = verify_token(token)
     if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
-        headers = {"api-key": api_key} if api_key else None
+        headers = {"api-key": todo_api_key}
         r.srem("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id))
+        for key in r.scan_iter("meeting:*"):
+            print(key)
+            # Check if the value is a member of the Set
+            if r.sismember(key, "todo:" + str(todo_id)):
+                # Remove the value from the Set
+                r.srem(key, "todo:" + str(todo_id))
+                break
         return make_request(url, method="DELETE", headers=headers)
     else:
         raise HTTPException(status_code=403, detail="Unauthorized")
@@ -186,139 +214,182 @@ def delete_todo(token: str,
 
 # Meetings endpoints
 @app.get("/meetings", tags=["Meetings"])
-def get_meetings(user_id: Optional[str] = None,
-                 api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/meetings"
-    params = {"user_id": user_id}
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, params=params, headers=headers)
+def get_meetings(token: str):
+
+    u = verify_token(token)
+    user_key = "user:" + str(u["id"]) + ":meetings"
+    meetings_ids = r.smembers(user_key)
+    d = {}
+    for meeting_id in meetings_ids:
+        id = meeting_id.split(":")[1]
+        m = get_meeting(token, id, meetings_api_key)
+        m["created_by"] = u["id"]
+        d[id] = m
+    return d
 
 
 @app.get("/meetings/{meeting_id}", tags=["Meetings"])
-def get_meeting(meeting_id: str,
-                api_key: Optional[str] = Header(None)):
+def get_meeting(token: str,
+                meeting_id: str):
     url = f"{meetings_service_url}/meetings/{meeting_id}"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+    verify_token(token)
+    headers = {"Authorization": f"Bearer {meetings_api_key}"}
     return make_request(url, headers=headers)
 
 
 @app.post("/meetings", tags=["Meetings"])
-def create_meeting(meeting_data: dict,
-                   api_key: Optional[str] = Header(None)):
+def create_meeting(meeting_data: meeting_models.MeetingReceive,
+                   token: str):
     url = f"{meetings_service_url}/meetings/"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    meeting = make_request(url, method="POST", params=meeting_data,
-                           headers=headers)
-    # Send notification /notifications
-
-    return meeting
+    u = verify_token(token)
+    headers = {"Authorization": f"Bearer {meetings_api_key}"}
+    meeting_data.start_date = meeting_data.start_date.isoformat()
+    meeting_data.end_date = meeting_data.end_date.isoformat()
+    rsp = make_request(url, method="POST", params=meeting_data.dict(),
+                       headers=headers)
+    meeting_id = "meeting:" + str(rsp["id"])
+    user_key = "user:" + str(u["id"]) + ":meetings"
+    r.sadd(user_key, meeting_id)
+    return rsp
 
 
 @app.put("/meetings/{meeting_id}", tags=["Meetings"])
-def update_meeting(meeting_id: str, meeting_data: dict,
-                   api_key: Optional[str] = Header(None)):
+def update_meeting(token: str,
+                   meeting_id: str,
+                   meeting_data: meeting_models.MeetingUpdate):
     url = f"{meetings_service_url}/meetings/{meeting_id}"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, method="PUT", params=meeting_data, headers=headers)
+    u = verify_token(token)
+    if r.sismember("user:" + str(u["id"]) + ":meetings",
+                   "meeting:" + str(meeting_id)):
+        meeting_data.start_date = meeting_data.start_date.isoformat()
+        meeting_data.end_date = meeting_data.end_date.isoformat()
+        headers = {"Authorization": f"Bearer {meetings_api_key}"}
+        return make_request(url, method="PUT", params=meeting_data.dict(),
+                            headers=headers)
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 @app.delete("/meetings/{meeting_id}", tags=["Meetings"])
-def delete_meeting(meeting_id: str,
-                   api_key: Optional[str] = Header(None)):
+def delete_meeting(token: str,
+                   meeting_id: str):
     url = f"{meetings_service_url}/meetings/{meeting_id}"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, method="DELETE", headers=headers)
+    u = verify_token(token)
+    if r.sismember("user:" + str(u["id"]) + ":meetings",
+                   "meeting:" + str(meeting_id)):
+        r.srem("user:" + str(u["id"]) + ":meetings", "meeting:" + str(meeting_id))
+        headers = {"Authorization": f"Bearer {meetings_api_key}"}
+        return make_request(url, method="DELETE", headers=headers)
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 # Documents endpoints
 @app.get("/documents", tags=["Documents"])
-def get_documents(user_id: Optional[str] = None,
-                  api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/documents/"
-    params = {"user_id": user_id}
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, params=params, headers=headers)
+def get_documents(token: str):
+    url = f"{docs_service_url}/documents/"
+    u = verify_token(token)
+    params = {"user_id": "0"}
+    headers = {"Authorization": f"Bearer {docs_api_key}"}
+    rsp = make_request(url, params=params, headers=headers)
+    user_key = "user:" + str(u["id"]) + ":documents"
+    d = {}
+    for document in rsp:
+        if r.sismember(user_key, "document:" + str(document["id"])):
+            d[document["id"]] = document
+            d[document["id"]]["uploaded_by"] = u["id"]
+    return d
 
 
-@app.get("/documents/{document_id}", tags=["Documents"])
-def get_document(document_id: str, user_id: Optional[str] = None,
-                 api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/documents/{document_id}"
-    params = {"user_id": user_id}
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+@app.get("/documents/download/{document_id}", tags=["Documents"])
+def get_document(token: str,
+                 document_id: str):
+    url = f"{docs_service_url}/documents/{document_id}"
+    u = verify_token(token)
+    if r.sismember("user:" + str(u["id"]) + ":documents",
+                   "document:" + str(document_id)):
+        headers = {"Authorization": f"Bearer {docs_api_key}"}
 
-    # Send the request to your service
-    response = requests.get(url, params=params, headers=headers)
+        params = {"document_id": document_id}
+        # Send the request to your service
+        response = requests.get(url, params=params, headers=headers)
 
-    print(response.headers)
-    # Raise an HTTPException if the request failed
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
+        # Raise an HTTPException if the request failed
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
 
-    # Get the file content and metadata from the response
-    file_content = response.content
-    file_type = response.headers["Content-Type"]
-    content_disposition = response.headers["Content-Disposition"]
-    filename_index = content_disposition.find("filename*=")
-    if filename_index != -1:
-        file_name = content_disposition.split("filename*=utf-8")[1].strip('"')
+        # Get the file content and metadata from the response
+        file_content = response.content
+        file_type = response.headers["Content-Type"]
+        content_disposition = response.headers["Content-Disposition"]
+        filename_index = content_disposition.find("filename*=")
+        if filename_index != -1:
+            file_name = content_disposition.split("filename*=utf-8")[1].strip('"')
+        else:
+            file_name = content_disposition.split("filename=")[1].strip('"')
+        # Create a StreamingResponse to return the file content as a downloadable file
+        response = StreamingResponse(
+            iter([file_content]),
+            media_type=file_type
+        )
+        response.headers["Content-Disposition"] = f"attachment; filename={file_name}"
+        return response
     else:
-        file_name = content_disposition.split("filename=")[1].strip('"')
-    # Create a StreamingResponse to return the file content as a downloadable file
-    response = StreamingResponse(
-        iter([file_content]),
-        media_type=file_type
-    )
-    response.headers["Content-Disposition"] = f"attachment; filename={file_name}"
-
-    return response
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 @app.post("/documents/upload", tags=["Documents"])
-def upload_document(user_id: Optional[str], meeting_id: Optional[str],
-                    file: UploadFile = File(...),
-                    api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/documents/upload?user_id={user_id}&meeting_id={meeting_id}"
+def upload_document(token: str,
+                    file: UploadFile = File(...)):
+    url = f"{docs_service_url}/documents/upload"
+    u = verify_token(token)
     files = {"file": (file.filename, file.file.read(), file.content_type)}
-    params = {"user_id": user_id, "meeting_id": meeting_id}
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, method="POST", params=params, data=files, headers=headers)
-
-
-@app.get("/documents/m/{meeting_id}", tags=["Documents"])
-def get_documents_by_meeting(meeting_id: str,
-                             api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/documents/m/{meeting_id}"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, headers=headers)
+    headers = {"Authorization": f"Bearer {docs_api_key}"}
+    rsp = make_request(url, method="POST", files=files, headers=headers)
+    user_key = "user:" + str(u["id"]) + ":documents"
+    r.sadd(user_key, "document:" + str(rsp["id"]))
+    return rsp
 
 
 @app.delete("/documents/{document_id}", tags=["Documents"])
-def delete_document(document_id: str, api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/documents/{document_id}"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, method="DELETE", headers=headers)
+def delete_document(token: str,
+                    document_id: str):
+    url = f"{docs_service_url}/documents/{document_id}"
+    u = verify_token(token)
+    user_key = "user:" + str(u["id"]) + ":documents"
+    if r.sismember(user_key, "document:" + str(document_id)):
+        r.srem(user_key, "document:" + str(document_id))
+        headers = {"Authorization": f"Bearer {docs_api_key}"}
+        return make_request(url, method="DELETE", headers=headers)
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized")
 
 
 @app.post("/documents/{document_id}/sign", tags=["Documents"])
-def sign_document(document_id: str, sign_data: dict,
-                  api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/documents/{document_id}/sign/"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
-    return make_request(url, method="POST", params=sign_data, headers=headers)
+def sign_document(token: str,
+                  document_id: str, sign_data: documents_models.DocumentSign):
+    url = f"{docs_service_url}/documents/{document_id}/sign/"
+    verify_token(token)
+    headers = {"Authorization": f"Bearer {docs_api_key}"}
+    return make_request(url, method="POST", params=sign_data.dict(),
+                        headers=headers)
 
 
 @app.post("/documents/{document_id}/sign/verify", tags=["Documents"])
-def verify_document(document_id: str, api_key: Optional[str] = Header(None)):
-    url = f"{meetings_service_url}/documents/{document_id}/sign/verify"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+def verify_document(token: str,
+                    document_id: str):
+    url = f"{docs_service_url}/documents/{document_id}/sign/verify"
+    verify_token(token)
+    headers = {"Authorization": f"Bearer {docs_api_key}"}
     return make_request(url, method="POST", headers=headers)
 
 
 @app.get("/documents/{document_id}/download", tags=["Documents"])
-def download_document(document_id: str, api_key: Optional[str] = Header(None)):
+def download_document(token: str,
+                      document_id: str):
     url = f"{meetings_service_url}/documents/{document_id}/download"
-    headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
+    verify_token(token)
+    headers = {"Authorization": f"Bearer {docs_api_key}"}
     params = {"document_id": document_id}
     response = requests.get(url, params=params, headers=headers)
 

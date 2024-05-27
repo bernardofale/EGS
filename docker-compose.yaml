@@ -57,13 +57,13 @@ services:
     depends_on:
       - todo_db
     environment:
-    - DATABASE_URL=mysql://docker:docker@todo_db:3306/exampledb
+    - DATABASE_URL=mysql://docker:docker@todo-db:3306/exampledb
     volumes:
       - ./TodoList:/todo
 
   todo_db:
     image: mysql
-    container_name: "todo_db"
+    container_name: "todo-db"
     ports:
       - 3306:3306
     restart: always
@@ -132,7 +132,7 @@ services:
 
   auth_api:
     build:
-      context: ./auth
+      context: ./auth2
       dockerfile: Dockerfile
     container_name: "auth-api"
     ports:

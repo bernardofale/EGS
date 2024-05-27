@@ -15,14 +15,13 @@ app = APIRouter()
 
 
 @app.post("/upload", status_code=201)
-async def upload_document(user_id: str,
-                          file: UploadFile = File(...)):
+async def upload_document(file: UploadFile = File(...)):
     # Mock function to upload document to the database
     new_doc = Document(name=file.filename,
                        content_type=file.content_type,
                        content=bytes(file.file.read()),
                        signed=False,
-                       uploaded_by=user_id)
+                       uploaded_by="0")
     with Session(engine) as session:
         session.add(new_doc)
         session.commit()
@@ -31,7 +30,7 @@ async def upload_document(user_id: str,
                             name=new_doc.name,
                             content_type=new_doc.content_type,
                             signed=False,
-                            uploaded_by=new_doc.uploaded_by)
+                            uploaded_by="0")
 
 
 @app.get("/", status_code=200)
