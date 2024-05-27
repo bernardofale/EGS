@@ -1,8 +1,19 @@
-version: '3'
+version: "3.9"
 
 services:
-  database:
+  todo_api:
+    build: .
+    container_name: "todo_api"
+    ports:
+      - '8002:8002'
+    depends_on:
+      - todo-db
+    environment:
+      - DATABASE_URL=mysql://docker:docker@todo-db:3306/exampledb
+
+  todo-db:
     image: mysql
+    container_name: "todo-db"
     ports:
       - 3306:3306
     restart: always
@@ -12,18 +23,7 @@ services:
       MYSQL_USER: docker
       MYSQL_PASSWORD: docker
     volumes:
-      - db-photo-upload-service:/var/lib/mysql
-
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    ports:
-      - '8002:8002'
-    depends_on:
-      - database
-    volumes:
-      - .:/app
+      - db_photo_upload_service:/var/lib/mysql
 
 volumes:
-  db-photo-upload-service:
+  db_photo_upload_service:  
