@@ -3,12 +3,12 @@ from fastapi import HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from app.resp_models.model import TokenData, User, Token, UserInDB
 from jose import jwt, JWTError
-from decouple import config
 from app.crud.crud_ops import get_user
 
-JWT_SECRET = config("secret")
-JWT_ALGORITHM = config("algorithm")
 
+JWT_EXPIRY = 30
+JWT_SECRET = "48dd53b11f29fe0aceeb80a83b921b9fda93974121546cd8400eac7c2cc27c41"
+JWT_ALGORITHM = "HS256"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
 
