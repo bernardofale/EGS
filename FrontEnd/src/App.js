@@ -6,7 +6,6 @@ import Dashboard from "./scenes/dashboard";
 import Documents from "./scenes/documents";
 import Sidebar from "./scenes/global/Sidebar";
 import Topbar from "./scenes/global/Topbar";
-import HumanResources from "./scenes/hr";
 import Meetings from "./scenes/meetings";
 import Notifications from "./scenes/noti";
 import Inventory from "./scenes/todo";
@@ -28,7 +27,6 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/noti" element={<Notifications />} />
-              <Route path="/hr" element={<HumanResources />} />
               <Route path="/meetings" element={<Meetings />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/todo" element={<Inventory />} />

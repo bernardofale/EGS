@@ -1,6 +1,5 @@
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import ChecklistIcon from '@mui/icons-material/Checklist';
-import ContactsOutlinedIcon from "@mui/icons-material/ContactsOutlined";
 import DocumentScannerIcon from '@mui/icons-material/DocumentScanner';
 import GroupsIcon from '@mui/icons-material/Groups';
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
@@ -118,13 +117,6 @@ const Sidebar = () => {
               title="Notifications"
               to="/noti"
               icon={<NotificationsIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Human Resources"
-              to="/hr"
-              icon={<ContactsOutlinedIcon />}
               selected={selected}
               setSelected={setSelected}
             />
