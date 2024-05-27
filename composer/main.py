@@ -44,6 +44,7 @@ def make_request(url, method="GET", params=None, data=None,
         raise HTTPException(status_code=response.status_code,
                             detail=response.json())
 
+
 # Auth endpoints
 @app.post("/register", tags=["Auth"])
 def register(user: UserInDB):
