@@ -10,21 +10,10 @@ from sqlalchemy import desc, asc
 from generateApiKey import generateApiKey
 import random
 import string
+import subprocess
+import time
 
 app = FastAPI()
-
-
-# novas implemetacoes:
-    # adicionei sqlalchemy
-    # adicionei o campo due date e da para dar Sort by date time or even date
-    # adicionei as versoes 1, por agora
-    # o delete e o put ja e por id e nao geral.
-    # 
-    # API Key feita.
-    # Crio um user com palavra pass nao encriptada, gero uma API Key e dps passo por header essa api key para puder aceder a todos os enpoints, seja get como put e delete.
-
-
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -57,8 +46,24 @@ class ToDoItem(Base):
     due_date = Column(Date)
 
 # Create SQLAlchemy engine and session
-SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://docker:docker@todo_db/exampledb"
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+SQLALCHEMY_DATABASE_URL = "mysql+mysqlconnector://docker:docker@todo-db:3306/exampledb"
+
+def wait_for_mysql_startup():
+    """Waits for the MySQL server to be ready for connections."""
+    logger.info("Waiting for MySQL server to start...")
+    logger.info(SQLALCHEMY_DATABASE_URL)
+    while True:
+        try:
+            engine = create_engine(SQLALCHEMY_DATABASE_URL)
+            engine.connect()  # This will raise an exception if MySQL is not ready
+            logger.info("MySQL server is up and running!")
+            return engine
+        except Exception as e:
+            logger.info(f"MySQL connection failed: {str(e)}")
+            time.sleep(2)  # Wait for 2 seconds before retrying
+
+print("BOASTESTE")
+engine = wait_for_mysql_startup()
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class UserCreate(BaseModel):
@@ -96,9 +101,6 @@ async def validate_api_key(api_key: Optional[str] = Header(None)):
     
     if not user:
         raise HTTPException(status_code=401, detail="Invalid API Key")
-
-
-
 
 
 @app.post('/v1/users', tags=["Users"])
