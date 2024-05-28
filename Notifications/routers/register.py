@@ -7,6 +7,7 @@ from db.crud import usercrud
 from db.schemas import userschema
 from sqlalchemy.orm import Session
 from db.database import get_db
+from starlette.responses import JSONResponse
 
 router = APIRouter()
 
@@ -33,6 +34,8 @@ def register(request: Request, name_of_service: str = Form(...), username: str= 
         db_user = usercrud.get_user_by_username(db, username=username)
         # return responses.RedirectResponse(router.url_path_for(name='homepage')
         #                         +"/?alert=Successfully%20Registered",status_code=status.HTTP_302_FOUND)
+        if "application/json" in request.headers.get("accept", ""):
+            return JSONResponse(status_code=200, content={'api_key': db_user.api_key})
         return templates.TemplateResponse(
             "/home.html", {"request": request, "alert": "Successfully Registered", "username": db_user.username,
                            "name_of_service": db_user.name_of_service, "api_key": db_user.api_key }     )
