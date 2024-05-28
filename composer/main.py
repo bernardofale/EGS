@@ -11,6 +11,7 @@ from models import documents_models
 import redis
 import json
 from fastapi.middleware.cors import CORSMiddleware
+import os
 
 app = FastAPI()
 app.add_middleware(
@@ -21,17 +22,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Connect to redis
-r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+REDIS_HOST = os.getenv("REDIS_HOST")
+TODO_HOST = os.getenv("TODO_HOST")
+TODO_PORT = os.getenv("TODO_PORT")
+MEETINGS_HOST = os.getenv("MEETINGS_HOST")
+MEETINGS_PORT = os.getenv("MEETINGS_PORT")
+DOCS_HOST = os.getenv("DOCS_HOST")
+DOCS_PORT = os.getenv("DOCS_PORT")
+NOTIFICATIONS_HOST = os.getenv("NOTIFICATIONS_HOST")
+NOTIFICATIONS_PORT = os.getenv("NOTIFICATIONS_PORT")
+AUTH_HOST = os.getenv("AUTH_HOST")
+AUTH_PORT = os.getenv("AUTH_PORT")
 
-todo_service_url = "http://0.0.0.0:8002"
+# Connect to redis
+r = redis.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
+
+todo_service_url = f"http://{TODO_HOST}:{TODO_PORT}"
 todo_api_key = "CGtZ10f6JytK0EOMeuI6noSfZEmDowqn"
-meetings_service_url = "http://0.0.0.0:80"
+meetings_service_url = f"http://{MEETINGS_HOST}:{MEETINGS_PORT}"
 meetings_api_key = "3e17a9d25945d0d7d009ccd62a5a7816265d3c6ffa03334a85cfd74be10c55e7"
-docs_service_url = "http://0.0.0.0:81"
+docs_service_url = f"http://{DOCS_HOST}:{DOCS_PORT}"
 docs_api_key = "19e33835-b178-4ff9-98d5-6d5cf7ef15c0"
-notifications_service_url = "http://0.0.0.0:8000"
-auth_service_url = "http://0.0.0.0:8003"
+notifications_service_url = f"http://{NOTIFICATIONS_HOST}:{NOTIFICATIONS_PORT}"
+auth_service_url = f"http://{AUTH_HOST}:{AUTH_PORT}"
 
 
 # Helper function to make requests

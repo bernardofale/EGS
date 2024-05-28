@@ -4,6 +4,29 @@ services:
   
     composer-db:
       image: redis
+      container_name: "composer-db"
       restart: always
       ports:
         - "6379:6379"
+
+    composer:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      restart: always
+      environment:
+        - REDIS_HOST=composer-db
+        - TODO_HOST=todo_api
+        - TODO_PORT=8002
+        - AUTH_HOST=auth-api
+        - AUTH_PORT=8003
+        - DOCS_HOST=documents-api
+        - DOCS_PORT=81
+        - MEETINGS_HOST=meetings-api
+        - MEETINGS_PORT=80
+        - NOTIFICATIONS_HOST=notifications-api
+        - NOTIFICATIONS_PORT=8080
+      ports:
+        - "8004:8004"
+      depends_on:
+        - composer-db
