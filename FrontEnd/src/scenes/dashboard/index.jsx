@@ -17,6 +17,12 @@ const getMostRecentTask = (tasks) => {
   }, tasks[0]);
 };
 
+const getMostRecentMeeting = (meetings) => {
+  return meetings.reduce((earliest, current) => {
+    return new Date(current.start_date) < new Date(earliest.start_date) ? current : earliest;
+  }, meetings[0]);
+};
+
 const Dashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
@@ -28,6 +34,7 @@ const Dashboard = () => {
       : mostRecentDocument.content;
 
   const [mostRecentTask, setMostRecentTask] = useState(null);
+  const [mostRecentMeeting, setMostRecentMeeting] = useState(null);
 
   useEffect(() => {
     const token = Cookies.get('access_token');
@@ -55,7 +62,31 @@ const Dashboard = () => {
       }
     };
 
+    const fetchMeetings = async () => {
+      try {
+        const response = await axios.get('/meetings', {
+          headers: {
+            'accept': 'application/json'
+          },
+          params: {
+            token: token
+          }
+        });
+        if (response.data && typeof response.data === 'object') {
+          const meetingsArray = Object.values(response.data); // Extrai os valores do objeto
+          setMostRecentMeeting(getMostRecentMeeting(meetingsArray));
+        } else {
+          console.error("Erro: Dados recebidos não são um objeto esperado");
+          setMostRecentMeeting(null);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar as reuniões:", error);
+        setMostRecentMeeting(null);
+      }
+    };
+
     fetchTodo();
+    fetchMeetings();
   }, []);
 
   return (
@@ -107,49 +138,59 @@ const Dashboard = () => {
           gridRow="span 3"
           backgroundColor={colors.primary[400]}
           display="flex"
+          flexDirection="column"
           alignItems="center"
           justifyContent="center"
-          borderRadius="15px" 
+          borderRadius="15px"
+          textAlign="center"
+          p={4}
         >
           <Typography variant="h3" color="textPrimary" gutterBottom>
-            Meetings
+            Earliest meeting
           </Typography>
-        </Box>
-        
-        {/* Box 2 */}
-        <Box
-          gridColumn="span 4"
-          gridRow="span 2"
-          backgroundColor={colors.primary[400]}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          borderRadius="15px" 
-        >
-          <Typography variant="h3" color="textPrimary" gutterBottom>
-            Most recent notifications
-          </Typography>
+          {mostRecentMeeting ? (
+            <>
+              <Typography variant="h4" color="textSecondary" gutterBottom>
+                Meeting: {mostRecentMeeting.title}
+              </Typography>
+              <Typography variant="h5" color="textSecondary" gutterBottom>
+                Date: {new Date(mostRecentMeeting.start_date).toLocaleDateString()}
+              </Typography>
+              <Typography variant="h6" color="textSecondary">
+                Location: {mostRecentMeeting.location}
+              </Typography>
+              <Typography variant="h6" color="textSecondary">
+                Attendee: {mostRecentMeeting.created_by}
+              </Typography>
+            </>
+          ) : (
+            <Typography variant="h4" color="textSecondary">
+              No meetings available
+            </Typography>
+          )}
         </Box>
         
         {/* Box 3 */}
         <Box
-          gridColumn="span 4"
+          gridColumn="span 3"
+          gridRow="span 3"
           backgroundColor={colors.primary[400]}
           display="flex"
           alignItems="center"
           justifyContent="center"
-          borderRadius="15px" 
+          borderRadius="15px"
+          textAlign="center"
         >
           {mostRecentTask ? (
             <Box textAlign="center">
               <Typography variant="h3" color="textPrimary" gutterBottom>
-                Most priority task
+                Task with the earliest due date
               </Typography>
               <Typography variant="h4" color="textSecondary" gutterBottom>
-                {mostRecentTask.description}
+                Task: {mostRecentTask.description}
               </Typography>
               <Typography variant="h5" color="textSecondary" gutterBottom>
-                {mostRecentTask.content}
+                Description: {mostRecentTask.content}
               </Typography>
               <Typography variant="h6" color="textSecondary">
                 Due Date: {new Date(mostRecentTask.due_date).toLocaleDateString()}

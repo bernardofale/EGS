@@ -1,51 +1,70 @@
-import { Box, Button, Grid, MenuItem, Select, TextField } from "@mui/material";
+import { Box, Button, Grid, TextField } from "@mui/material";
+import axios from 'axios';
+import Cookies from 'js-cookie';
 import React, { useState } from "react";
 import Header from "../../components/Header";
 
 const Meetings = () => {
   const [meetings, setMeetings] = useState([]);
   const [meetingTitle, setMeetingTitle] = useState("");
-  const [day, setDay] = useState("");
-  const [month, setMonth] = useState("");
-  const [year, setYear] = useState("");
-  const [hour, setHour] = useState("");
   const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
+  const [attendees, setAttendees] = useState([{ user_id: "", status: "pending" }]);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const addMeeting = async () => {
+    const token = Cookies.get('token');
+
+    if (!meetingTitle || !location || !startDate || !endDate) {
+      console.error("Preencha todos os campos obrigatórios.");
+      return;
+    }
+
     const newMeeting = {
-      id: meetings.length + 1,
       title: meetingTitle,
-      dateTime: `${day}/${month}/${year} ${hour}:00`,
       location: location,
-      description: description,
+      start_date: new Date(startDate).toISOString(), // Convert to ISO string
+      end_date: new Date(endDate).toISOString(), // Convert to ISO string
+      todo_id: "string",
+      attendees: attendees.filter(att => att.user_id !== ""), // Remove attendees without user_id
+      created_by: "string" // Atualize este campo conforme necessário
     };
 
     try {
-      const response = await fetch("composer", {
-        method: "POST",
+      const response = await axios.post('/meetings', newMeeting, {
         headers: {
-          "Content-Type": "application/json",
+          'accept': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(newMeeting),
+        params: {
+          token: token
+        }
       });
 
-      if (!response.ok) {
+      if (!response.data) {
         throw new Error("Failed to create new meeting");
       }
 
-      const createdMeeting = await response.json();
+      const createdMeeting = response.data;
       setMeetings([...meetings, createdMeeting]);
       setMeetingTitle("");
-      setDay("");
-      setMonth("");
-      setYear("");
-      setHour("");
       setLocation("");
-      setDescription("");
+      setAttendees([{ user_id: "", status: "pending" }]);
+      setStartDate("");
+      setEndDate("");
     } catch (error) {
       console.error("Erro ao adicionar a reunião:", error);
     }
+  };
+
+  const handleAttendeeChange = (index, value) => {
+    const newAttendees = [...attendees];
+    newAttendees[index].user_id = value;
+    setAttendees(newAttendees);
+  };
+
+  const addAttendee = () => {
+    setAttendees([...attendees, { user_id: "", status: "pending" }]);
   };
 
   return (
@@ -72,102 +91,48 @@ const Meetings = () => {
             onChange={(e) => setLocation(e.target.value)}
           />
         </Grid>
-        <Grid item xs={6} sm={3}>
-          <Select
-            fullWidth
-            variant="filled"
-            value={day}
-            onChange={(e) => setDay(e.target.value)}
-            displayEmpty
-            sx={{ textAlign: "center" }} // Center text
-          >
-            <MenuItem value="">Day</MenuItem>
-            {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-              <MenuItem key={day} value={day}>
-                {day}
-              </MenuItem>
-            ))}
-          </Select>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Select
-            fullWidth
-            variant="filled"
-            value={month}
-            onChange={(e) => setMonth(e.target.value)}
-            displayEmpty
-            sx={{ textAlign: "center" }} // Center text
-          >
-            <MenuItem value="">Month</MenuItem>
-            {[
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December"
-            ].map((month, index) => (
-              <MenuItem key={index} value={index + 1}>
-                {month}
-              </MenuItem>
-            ))}
-          </Select>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Select
-            fullWidth
-            variant="filled"
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            displayEmpty
-            sx={{ textAlign: "center" }} // Center text
-          >
-            <MenuItem value="">Year</MenuItem>
-            {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() + i).map((year) => (
-              <MenuItem key={year} value={year}>
-                {year}
-              </MenuItem>
-            ))}
-          </Select>
-        </Grid>
-        <Grid item xs={6} sm={3}>
-          <Select
-            fullWidth
-            variant="filled"
-            value={hour}
-            onChange={(e) => setHour(e.target.value)}
-            displayEmpty
-            sx={{ textAlign: "center" }} // Center text
-          >
-            <MenuItem value="">Hour</MenuItem>
-            {Array.from({ length: 24 }, (_, i) => i).map((hour) => (
-              <MenuItem key={hour} value={hour}>
-                {hour < 10 ? `0${hour}:00` : `${hour}:00`}
-              </MenuItem>
-            ))}
-          </Select>
-        </Grid>
-        <Grid item xs={12}>
+        <Grid item xs={6} sm={6}>
           <TextField
             fullWidth
             variant="filled"
-            type="text"
-            label="Description"
-            multiline
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            sx={{ marginBottom: 4 }}
+            type="datetime-local"
+            label="Start Date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            InputLabelProps={{
+              shrink: true,
+            }}
           />
         </Grid>
+        <Grid item xs={6} sm={6}>
+          <TextField
+            fullWidth
+            variant="filled"
+            type="datetime-local"
+            label="End Date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            InputLabelProps={{
+              shrink: true,
+            }}
+          />
+        </Grid>
+        {attendees.map((attendee, index) => (
+          <Grid key={index} item xs={12} sm={6}>
+            <TextField
+              fullWidth
+              variant="filled"
+              type="email"
+              label={`Attendee ${index + 1}`}
+              value={attendee.user_id}
+              onChange={(e) => handleAttendeeChange(index, e.target.value)}
+            />
+          </Grid>
+        ))}
+        <Grid item xs={12}>
+          <Button onClick={addAttendee}>Add Attendee</Button>
+        </Grid>
       </Grid>
-
       <Box display="flex" justifyContent="center" mt={2}>
         <Button size="large" onClick={addMeeting} color="secondary" variant="contained">
           Create New Meeting
