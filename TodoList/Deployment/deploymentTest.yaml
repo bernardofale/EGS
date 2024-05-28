@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: todo-api
-        image: registry.deti/egs-docmanager/todon:v1
+        image: registry.deti/egs-docmanager/todo:1.2
         resources:
           requests:
             memory: "32Mi"
