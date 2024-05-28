@@ -5,8 +5,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Login = ({ setIsAuthenticated }) => {
-  const [username, SetUsername] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');  // Novo estado para armazenar mensagens de erro
   const navigate = useNavigate();
 
   const handleLogin = async (event) => {
@@ -26,7 +27,7 @@ const Login = ({ setIsAuthenticated }) => {
     data.append('client_secret', '');
 
     try {
-      const response = await fetch('http://localhost:8004/login', {
+      const response = await fetch('/login', {
         method: 'POST',
         headers: headers,
         body: data
@@ -39,10 +40,10 @@ const Login = ({ setIsAuthenticated }) => {
         setIsAuthenticated(true);
         navigate('/dashboard');
       } else {
-        console.error('Authentication failed');
+        setError('Authentication failed. Please check your username and password.');  // Define a mensagem de erro
       }
     } catch (error) {
-      console.error('Error during authentication:', error);
+      setError('Error during authentication. Please try again later.');  // Define a mensagem de erro para erros de rede
     }
   };
 
@@ -62,6 +63,11 @@ const Login = ({ setIsAuthenticated }) => {
           <Typography component="h1" variant="h5" sx={{ fontSize: '1.5rem', color: '#fff' }}>
             Login
           </Typography>
+          {error && (
+            <Typography variant="body2" color="error" sx={{ mt: 1 }}>
+              {error}
+            </Typography>
+          )}
           <Box component="form" onSubmit={handleLogin} sx={{ mt: 1 }}>
             <TextField
               margin="normal"
@@ -73,7 +79,7 @@ const Login = ({ setIsAuthenticated }) => {
               autoComplete="username"
               autoFocus
               value={username}
-              onChange={(e) => SetUsername(e.target.value)}
+              onChange={(e) => setUsername(e.target.value)}
               InputLabelProps={{ style: { fontSize: '1.2rem' } }}
               InputProps={{ style: { fontSize: '1.2rem' } }}
             />

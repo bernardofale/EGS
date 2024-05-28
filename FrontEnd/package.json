@@ -1,5 +1,6 @@
 {
     "name": "react-admin",
+    "proxy": "http://egs-composer-1:8004",
     "version": "0.1.0",
     "private": true,
     "dependencies": {
