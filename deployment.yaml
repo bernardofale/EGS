@@ -1,3 +1,41 @@
+# Frontend deployment
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: 
+  name: frontend
+  namespace: egs-docmanager
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: registry.deti/egs-docmanager/frontend:1.2
+        ports:
+        - containerPort: 3000
+
+# Frontend service
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: egs-docmanager
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: frontend
+
+# Todo deployment
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,6 +67,8 @@ spec:
         env:
         - name: DATABASE_URL
           value: "mysql://docker:docker@todo-db:3306/exampledb"
+
+# Todo Service
 ---
 apiVersion: v1
 kind: Service
@@ -43,6 +83,7 @@ spec:
     app: todo-api
 
 
+# Todo DB Deployment
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -83,6 +124,8 @@ spec:
         - name: mysql-persistent-storage
           persistentVolumeClaim:
             claimName: todo-pv-claim
+
+# Todo DB Service
 ---
 apiVersion: v1
 kind: Service
@@ -97,6 +140,7 @@ spec:
     app: todo-db
   type: NodePort
 
+# Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -110,7 +154,7 @@ metadata:
     traefik.ingress.kubernetes.io/redirect-permanent: "true"
 spec:
   rules:
-  - host: grupo7-egs-deti.ua.pt
+  - host: grupo7-egs-deti.ua.pt   #Mudar aqui para todo?
     http:
       paths:
       - path: /
