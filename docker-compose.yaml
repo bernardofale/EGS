@@ -188,6 +188,13 @@ services:
       - composer-db
   
 
+  composer-db:
+    image: redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+
 volumes:
   postgres_data:  # Volume named "postgres_data"
   db-photo-upload-service: # Volume todo_database
