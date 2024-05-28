@@ -169,6 +169,8 @@ services:
     build:
       context: ./composer/
       dockerfile: Dockerfile
+
+    container_name: "egs-composer"
     restart: always
     environment:
       - REDIS_HOST=composer-db
