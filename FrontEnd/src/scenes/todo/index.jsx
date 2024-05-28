@@ -3,10 +3,9 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import StarIcon from "@mui/icons-material/Star";
 import StarBorderIcon from "@mui/icons-material/StarBorder";
 import UndoIcon from '@mui/icons-material/Undo';
-import { Box, Button, Chip, Typography, useTheme } from "@mui/material";
-import Accordion from "@mui/material/Accordion";
-import AccordionDetails from "@mui/material/AccordionDetails";
-import AccordionSummary from "@mui/material/AccordionSummary";
+import { Accordion, AccordionDetails, AccordionSummary, Box, Button, Chip, Typography, useTheme } from "@mui/material";
+import axios from 'axios';
+import Cookies from 'js-cookie';
 import React, { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import { tokens } from "../../theme";
@@ -14,45 +13,59 @@ import { tokens } from "../../theme";
 const ToDo = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-  const [todo, settodo] = useState([]);
+  const [todo, setTodo] = useState([]); // Inicializado como um array vazio
 
   useEffect(() => {
-    const fetchTodo = () => {
+    const fetchTodo = async () => {
+      const token = Cookies.get('access_token');
       try {
-        const data = JSON.parse(process.env.REACT_APP_TODO);
-        settodo(data);
+        const response = await axios.get('/todos', {
+          headers: {
+            'accept': 'application/json'
+          },
+          params: {
+            token: token // Passando o token como parâmetro de consulta
+          }
+        });
+        if (Array.isArray(response.data)) {
+          setTodo(response.data);
+        } else {
+          console.error("Erro: Dados recebidos não são um array");
+          setTodo([]);
+        }
       } catch (error) {
         console.error("Erro ao buscar as tarefas:", error);
+        setTodo([]);
       }
     };
 
     fetchTodo();
   }, []);
 
-  const sorttodoByPriority = () => {
-    const sortedtodo = [...todo];
-    sortedtodo.sort((a, b) => b.priority - a.priority);
-    settodo(sortedtodo);
+  const sortTodoByPriority = () => {
+    const sortedTodo = [...todo];
+    sortedTodo.sort((a, b) => b.priority - a.priority);
+    setTodo(sortedTodo);
   };
 
-  const sorttodoByName = () => {
-    const sortedtodo = [...todo];
-    sortedtodo.sort((a, b) => a.title.localeCompare(b.title));
-    settodo(sortedtodo);
+  const sortTodoByName = () => {
+    const sortedTodo = [...todo];
+    sortedTodo.sort((a, b) => a.title.localeCompare(b.title));
+    setTodo(sortedTodo);
   };
 
   const handleTaskDone = (taskId) => {
     const updatedTodo = todo.map(task =>
       task.id === taskId ? { ...task, done: true } : task
     );
-    settodo(updatedTodo);
+    setTodo(updatedTodo);
   };
 
   const handleTaskUndone = (taskId) => {
     const updatedTodo = todo.map(task =>
       task.id === taskId ? { ...task, done: false } : task
     );
-    settodo(updatedTodo);
+    setTodo(updatedTodo);
   };
 
   const renderPriorityStars = (priority) => {
@@ -75,8 +88,8 @@ const ToDo = () => {
 
       <Box display="flex" justifyContent="center" mb={2}>
         <Button variant="contained" color="primary" style={{ border: '1px solid white', marginRight: '8px', opacity: 0.8 }}>Add Task</Button>
-        <Button variant="contained" color="primary" style={{ border: '1px solid white', marginRight: '8px', opacity: 0.8 }} onClick={sorttodoByPriority}>Sort by Priority</Button>
-        <Button variant="contained" color="primary" style={{ border: '1px solid white', opacity: 0.8 }} onClick={sorttodoByName}>Sort by Title</Button>
+        <Button variant="contained" color="primary" style={{ border: '1px solid white', marginRight: '8px', opacity: 0.8 }} onClick={sortTodoByPriority}>Sort by Priority</Button>
+        <Button variant="contained" color="primary" style={{ border: '1px solid white', opacity: 0.8 }} onClick={sortTodoByName}>Sort by Title</Button>
       </Box>
 
       {todo.map((task) => (

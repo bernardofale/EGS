@@ -10,28 +10,40 @@ const Register = () => {
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState(''); 
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(''); // Novo estado para mensagem de sucesso
   const navigate = useNavigate();
 
   const handleRegister = async (event) => {
     event.preventDefault();
+    setError(''); // Limpa qualquer mensagem de erro anterior
+    setSuccess(''); // Limpa qualquer mensagem de sucesso anterior
+
     if (password !== confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
 
     try {
-      const response = await axios.post('http://localhost:8004/register', {
+      const response = await axios.post('/register', {
         id: 0,
         username: username,
         email: email,
         full_name: fullName,
-        disabled: false, 
-        hashed_password: password 
+        disabled: false,
+        hashed_password: password
+      }, {
+        headers: {
+          'accept': 'application/json',
+          'Content-Type': 'application/json'
+        }
       });
 
       if (response.status === 200) {
-        navigate('/login');
+        setSuccess('Registration successful! Please log in.'); 
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
       } else {
         setError('Failed to register. Please try again.');
       }
@@ -59,6 +71,11 @@ const Register = () => {
           {error && (
             <Typography variant="body2" color="error" sx={{ mt: 1 }}>
               {error}
+            </Typography>
+          )}
+          {success && (
+            <Typography variant="body2" color="success" sx={{ mt: 1 }}>
+              {success}
             </Typography>
           )}
           <Box component="form" onSubmit={handleRegister} sx={{ mt: 1 }}>
