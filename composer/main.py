@@ -127,7 +127,7 @@ def get_todos(token: str,
     d = {}
     for todo_id in todo_ids:
         id = todo_id.split(":")[1]
-        d[id] = get_todo_by_id(token, id, todo_api_key)
+        d[id] = get_todo_by_id(token, id)
     return d
 
 
@@ -173,7 +173,7 @@ def get_todos_by_meeting(token: str,
     d = {}
     for todo_id in todo_ids:
         id = todo_id.split(":")[1]
-        d[id] = get_todo_by_id(token, id, todo_api_key)
+        d[id] = get_todo_by_id(token, id)
     return d
 
 
@@ -235,7 +235,7 @@ def get_meetings(token: str):
     d = {}
     for meeting_id in meetings_ids:
         id = meeting_id.split(":")[1]
-        m = get_meeting(token, id, meetings_api_key)
+        m = get_meeting(token, id)
         m["created_by"] = u["id"]
         d[id] = m
     return d
