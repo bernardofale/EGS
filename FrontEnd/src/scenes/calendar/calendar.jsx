@@ -9,15 +9,17 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { useState } from "react";
+import axios from "axios";
+import Cookies from "js-cookie";
+import { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import { tokens } from "../../theme";
 
 const formatDate = (date) => {
   return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   }).format(date);
 };
 
@@ -26,38 +28,82 @@ const Calendar = () => {
   const colors = tokens(theme.palette.mode);
   const [currentEvents, setCurrentEvents] = useState([]);
 
-  const handleDateClick = (selected) => {
-    const title = prompt("Please enter a new title for your event");
-    const calendarApi = selected.view.calendar;
-    calendarApi.unselect();
+  useEffect(() => {
+    fetchMeetings();
+  }, []);
 
-    if (title) {
-      calendarApi.addEvent({
-        id: `${selected.dateStr}-${title}`,
-        title,
-        start: selected.startStr,
-        end: selected.endStr,
-        allDay: selected.allDay,
+  const fetchMeetings = async () => {
+    const token = Cookies.get('access_token');
+    try {
+      const response = await axios.get('/meetings', {
+        headers: {
+          'accept': 'application/json'
+        },
+        params: {
+          token: token
+        }
       });
+      const meetings = response.data.map(meeting => ({
+        id: meeting.id,
+        title: meeting.title,
+        start: meeting.start_date,
+        end: meeting.end_date,
+      }));
+      setCurrentEvents(meetings);
+    } catch (error) {
+      console.error("Erro ao buscar reuniões:", error);
     }
   };
 
-  const handleEventClick = (selected) => {
-    if (
-      window.confirm(
-        `Are you sure you want to delete the event '${selected.event.title}'`
-      )
-    ) {
-      selected.event.remove();
-      setCurrentEvents((prevEvents) =>
-        prevEvents.filter((event) => event.id !== selected.event.id)
-      );
+  const handleEventClick = async (selected) => {
+    const action = prompt("Type 'edit' to edit the meeting or 'delete' to delete it");
+
+    if (action === 'delete') {
+      if (window.confirm(`Are you sure you want to delete the event '${selected.event.title}'?`)) {
+        const token = Cookies.get('access_token');
+        try {
+          await axios.delete(`/meetings/${selected.event.id}`, {
+            headers: {
+              'accept': 'application/json'
+            },
+            params: {
+              token: token
+            }
+          });
+          selected.event.remove();
+          fetchMeetings();
+        } catch (error) {
+          console.error("Erro ao deletar reunião:", error);
+        }
+      }
+    } else if (action === 'edit') {
+      const newTitle = prompt("Please enter a new title for your event", selected.event.title);
+      if (newTitle) {
+        const token = Cookies.get('access_token');
+        try {
+          await axios.put(`/meetings/${selected.event.id}`, {
+            title: newTitle
+          }, {
+            headers: {
+              'accept': 'application/json',
+              'Content-Type': 'application/json'
+            },
+            params: {
+              token: token
+            }
+          });
+          selected.event.setProp('title', newTitle);
+          fetchMeetings();
+        } catch (error) {
+          console.error("Erro ao editar reunião:", error);
+        }
+      }
     }
   };
 
   return (
     <Box m="20px">
-      <Header title="Calendar"/>
+      <Header title="Calendar" />
 
       <Box display="flex" justifyContent="space-between">
         {/* CALENDAR SIDEBAR */}
@@ -82,7 +128,7 @@ const Calendar = () => {
                   primary={event.title}
                   secondary={
                     <Typography>
-                      {formatDate(event.start)}
+                      {formatDate(new Date(event.start))}
                     </Typography>
                   }
                 />
@@ -95,10 +141,7 @@ const Calendar = () => {
         <Box flex="1 1 100%" ml="15px">
           <FullCalendar
             height="75vh"
-            plugins={[
-              dayGridPlugin,
-              interactionPlugin,
-            ]}
+            plugins={[dayGridPlugin, interactionPlugin]}
             headerToolbar={{
               left: "title",
               center: "",
@@ -109,10 +152,8 @@ const Calendar = () => {
             selectable={true}
             selectMirror={true}
             dayMaxEvents={true}
-            select={handleDateClick}
             eventClick={handleEventClick}
             eventsSet={(events) => setCurrentEvents(events)}
-
           />
         </Box>
       </Box>

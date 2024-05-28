@@ -4,7 +4,6 @@ import DocumentScannerIcon from '@mui/icons-material/DocumentScanner';
 import GroupsIcon from '@mui/icons-material/Groups';
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
-import NotificationsIcon from '@mui/icons-material/Notifications';
 import { Box, IconButton, Typography, useTheme } from "@mui/material";
 import React, { useEffect, useState } from "react";
 import { Menu, MenuItem, ProSidebar } from "react-pro-sidebar";
@@ -110,13 +109,6 @@ const Sidebar = () => {
               title="Dashboard"
               to="/dashboard"
               icon={<HomeOutlinedIcon />}
-              selected={selected}
-              setSelected={setSelected}
-            />
-            <Item
-              title="Notifications"
-              to="/noti"
-              icon={<NotificationsIcon />}
               selected={selected}
               setSelected={setSelected}
             />

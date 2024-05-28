@@ -1,5 +1,7 @@
 import { Box, Typography, useTheme } from "@mui/material";
-import React from "react";
+import axios from 'axios';
+import Cookies from 'js-cookie';
+import React, { useEffect, useState } from "react";
 import Header from "../../components/Header";
 import { tokens } from "../../theme";
 
@@ -9,16 +11,52 @@ const getMostRecentDocument = (documents) => {
   }, documents[0]);
 };
 
+const getMostRecentTask = (tasks) => {
+  return tasks.reduce((latest, current) => {
+    return new Date(current.due_date) > new Date(latest.due_date) ? current : latest;
+  }, tasks[0]);
+};
+
 const Dashboard = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const documents = JSON.parse(process.env.REACT_APP_DOCUMENTS);
   const mostRecentDocument = getMostRecentDocument(documents);
-
   const truncatedContent =
     mostRecentDocument.content.length > 200
       ? `${mostRecentDocument.content.slice(0, 200)}...`
       : mostRecentDocument.content;
+
+  const [mostRecentTask, setMostRecentTask] = useState(null);
+
+  useEffect(() => {
+    const token = Cookies.get('access_token');
+
+    const fetchTodo = async () => {
+      try {
+        const response = await axios.get('/todos', {
+          headers: {
+            'accept': 'application/json'
+          },
+          params: {
+            token: token
+          }
+        });
+        if (response.data && typeof response.data === 'object') {
+          const todoArray = Object.values(response.data);
+          setMostRecentTask(getMostRecentTask(todoArray));
+        } else {
+          console.error("Erro: Dados recebidos não são um objeto esperado");
+          setMostRecentTask(null);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar as tarefas:", error);
+        setMostRecentTask(null);
+      }
+    };
+
+    fetchTodo();
+  }, []);
 
   return (
     <Box m="20px">
@@ -102,9 +140,26 @@ const Dashboard = () => {
           justifyContent="center"
           borderRadius="15px" 
         >
-          <Typography variant="h3" color="textPrimary" gutterBottom>
-            Most priority task
-          </Typography>
+          {mostRecentTask ? (
+            <Box textAlign="center">
+              <Typography variant="h3" color="textPrimary" gutterBottom>
+                Most priority task
+              </Typography>
+              <Typography variant="h4" color="textSecondary" gutterBottom>
+                {mostRecentTask.description}
+              </Typography>
+              <Typography variant="h5" color="textSecondary" gutterBottom>
+                {mostRecentTask.content}
+              </Typography>
+              <Typography variant="h6" color="textSecondary">
+                Due Date: {new Date(mostRecentTask.due_date).toLocaleDateString()}
+              </Typography>
+            </Box>
+          ) : (
+            <Typography variant="h4" color="textSecondary">
+              No tasks available
+            </Typography>
+          )}
         </Box>
       
       </Box>

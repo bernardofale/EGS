@@ -1,17 +1,10 @@
-import NotificationsOutlinedIcon from "@mui/icons-material/NotificationsOutlined";
-import { Box, IconButton, useTheme } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { Box, useTheme } from "@mui/material";
 import { tokens } from "../../theme";
 
 const Topbar = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-  const navigate = useNavigate();
 
-
-  const handleNotificationsClick = () => {
-    navigate("/noti");
-  };
 
 
   return (
@@ -22,14 +15,6 @@ const Topbar = () => {
         backgroundColor={colors.primary[400]}
         borderRadius="3px"
       >
-      </Box>
-
-      {/* ICONS */}
-      <Box display="flex">
-
-        <IconButton onClick={handleNotificationsClick}>
-          <NotificationsOutlinedIcon />
-        </IconButton>
       </Box>
 
     </Box>
