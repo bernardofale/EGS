@@ -13,7 +13,7 @@ import { tokens } from "../../theme";
 const ToDo = () => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
-  const [todo, setTodo] = useState([]); // Inicializado como um array vazio
+  const [todo, setTodo] = useState([]);
 
   useEffect(() => {
     const fetchTodo = async () => {
