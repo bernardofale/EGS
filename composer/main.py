@@ -77,13 +77,13 @@ def register(user: UserInDB):
     url = f"{auth_service_url}/auth/register"
     return make_request(url, method="POST", params=user.dict())
 
-@app.post("/admin/Notifications/Token", tags=["Admin"])
+@app.post("/admin/notifications/token", tags=["Admin"])
 def register(token:str):
     global notifications_api_key
     notifications_api_key= token
     return {"status":"ok"}, 200
 
-@app.post("/admin/Todo/Token", tags=["Admin"])
+@app.post("/admin/todo/token", tags=["Admin"])
 def register(token:str):
     global todo_api_key
     todo_api_key= token
