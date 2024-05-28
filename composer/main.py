@@ -44,7 +44,9 @@ meetings_api_key = "3e17a9d25945d0d7d009ccd62a5a7816265d3c6ffa03334a85cfd74be10c
 docs_service_url = f"http://{DOCS_HOST}:{DOCS_PORT}"
 docs_api_key = "19e33835-b178-4ff9-98d5-6d5cf7ef15c0"
 notifications_service_url = f"http://{NOTIFICATIONS_HOST}:{NOTIFICATIONS_PORT}"
+notifications_api_key = ""
 auth_service_url = f"http://{AUTH_HOST}:{AUTH_PORT}"
+
 
 
 # Helper function to make requests
@@ -75,6 +77,17 @@ def register(user: UserInDB):
     url = f"{auth_service_url}/auth/register"
     return make_request(url, method="POST", params=user.dict())
 
+@app.post("/admin/Notifications/Token", tags=["Admin"])
+def register(token:str):
+    global notifications_api_key
+    notifications_api_key= token
+    return {"status":"ok"}, 200
+
+@app.post("/admin/Todo/Token", tags=["Admin"])
+def register(token:str):
+    global todo_api_key
+    todo_api_key= token
+    return {"status":"ok"}, 200
 
 @app.post("/login", tags=["Auth"])
 def login(form_data: OAuth2PasswordRequestForm = Depends()):
