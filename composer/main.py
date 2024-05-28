@@ -8,6 +8,7 @@ from models.models import ToDoItemCreate
 from models.auth_model import UserInDB
 from models import meeting_models
 from models import documents_models
+from models import usermodel
 import redis
 import json
 from fastapi.middleware.cors import CORSMiddleware
@@ -134,7 +135,7 @@ def get_todos(token: str,
               due_date: Optional[str] = None,
               sort_by_due_date: Optional[str] = None):
     u = verify_token(token)
-    user_key = "user:" + str(u["id"]) + ":todos"
+    user_key = "user:" + str(u["email"]) + ":todos"
     todo_ids = r.smembers(user_key)
     print(todo_ids)
     d = {}
@@ -154,7 +155,7 @@ def create_todo(token: str,
     rsp = make_request(url, method="POST", params=todo_data.dict(),
                        headers=headers)
     todo_id = "todo:" + str(rsp["id"])
-    user_key = "user:" + str(u["id"]) + ":todos"
+    user_key = "user:" + str(u["email"]) + ":todos"
     r.sadd(user_key, todo_id)
     return rsp
 
@@ -164,7 +165,7 @@ def associate_todo_with_meeting(token: str,
                                 todo_id: int,
                                 meeting_id: str):
     u = verify_token(token)
-    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+    if r.sismember("user:" + str(u["email"]) + ":todos", "todo:" + str(todo_id)):
         meeting_key = "meeting:" + meeting_id
         for key in r.scan_iter("meeting:*"):
             # Check if the value is a member of the Set
@@ -195,7 +196,7 @@ def get_todo_by_id(token: str,
                    todo_id: int):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
     u = verify_token(token)
-    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+    if r.sismember("user:" + str(u["email"]) + ":todos", "todo:" + str(todo_id)):
         headers = {"api-key": todo_api_key}
         return make_request(url, headers=headers)
     else:
@@ -208,7 +209,7 @@ def update_todo(todo_id: int,
                 todo_data: ToDoItemCreate):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
     u = verify_token(token)
-    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+    if r.sismember("user:" + str(u["email"]) + ":todos", "todo:" + str(todo_id)):
         todo_data.due_date = todo_data.due_date.isoformat()
         headers = {"api-key": todo_api_key}
         return make_request(url, method="PUT",
@@ -223,9 +224,9 @@ def delete_todo(token: str,
                 todo_id: int):
     url = f"{todo_service_url}/v1/todos/{todo_id}"
     u = verify_token(token)
-    if r.sismember("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id)):
+    if r.sismember("user:" + str(u["email"]) + ":todos", "todo:" + str(todo_id)):
         headers = {"api-key": todo_api_key}
-        r.srem("user:" + str(u["id"]) + ":todos", "todo:" + str(todo_id))
+        r.srem("user:" + str(u["email"]) + ":todos", "todo:" + str(todo_id))
         for key in r.scan_iter("meeting:*"):
             print(key)
             # Check if the value is a member of the Set
@@ -243,13 +244,13 @@ def delete_todo(token: str,
 def get_meetings(token: str):
 
     u = verify_token(token)
-    user_key = "user:" + str(u["id"]) + ":meetings"
+    user_key = "user:" + str(u["email"]) + ":meetings"
     meetings_ids = r.smembers(user_key)
     d = {}
     for meeting_id in meetings_ids:
         id = meeting_id.split(":")[1]
         m = get_meeting(token, id)
-        m["created_by"] = u["id"]
+        m["created_by"] = u["email"]
         d[id] = m
     return d
 
@@ -274,8 +275,15 @@ def create_meeting(meeting_data: meeting_models.MeetingReceive,
     rsp = make_request(url, method="POST", params=meeting_data.dict(),
                        headers=headers)
     meeting_id = "meeting:" + str(rsp["id"])
-    user_key = "user:" + str(u["id"]) + ":meetings"
+    user_key = "user:" + str(u["email"]) + ":meetings"
     r.sadd(user_key, meeting_id)
+    s = [r.sadd("user:" + str(attendee.user_id) + ":meetings", meeting_id) for attendee in meeting_data.attendees]
+    email_data = {
+        "subject": f"{u['username']} created a meeting",
+        "recipients": [attendee.user_id for attendee in meeting_data.attendees],
+        "body": f"You were invited to attend a meeting by {u['username']}. The meeting will take place on {meeting_data.location} at {meeting_data.start_date} and end on {meeting_data.end_date}."
+    }
+    send_email(email_data)
     return rsp
 
 
@@ -285,13 +293,26 @@ def update_meeting(token: str,
                    meeting_data: meeting_models.MeetingUpdate):
     url = f"{meetings_service_url}/meetings/{meeting_id}"
     u = verify_token(token)
-    if r.sismember("user:" + str(u["id"]) + ":meetings",
+    if r.sismember("user:" + str(u["email"]) + ":meetings",
                    "meeting:" + str(meeting_id)):
         meeting_data.start_date = meeting_data.start_date.isoformat()
         meeting_data.end_date = meeting_data.end_date.isoformat()
         headers = {"Authorization": f"Bearer {meetings_api_key}"}
-        return make_request(url, method="PUT", params=meeting_data.dict(),
-                            headers=headers)
+        rsp = make_request(url,
+                           method="PUT",
+                           params=meeting_data.dict(),
+                           headers=headers)
+        for key in r.scan_iter("user:*:meetings"):
+            # Check if the value is a member of the Set
+            if r.sismember(key, "meeting:" + str(meeting_id)) and not key == "user:" + str(u["email"]) + ":meetings":
+                email_data = {
+                    "subject": f"{u['username']} updated a meeting",
+                    "recipients": key.split(":")[1],
+                    "body": f"{u['username']} updated a meeting. The meeting will take place on {meeting_data.location} at {meeting_data.start_date} and end on {meeting_data.end_date}."
+                }
+                send_email(email_data)
+                continue
+        return rsp
     else:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -301,11 +322,25 @@ def delete_meeting(token: str,
                    meeting_id: str):
     url = f"{meetings_service_url}/meetings/{meeting_id}"
     u = verify_token(token)
-    if r.sismember("user:" + str(u["id"]) + ":meetings",
+    if r.sismember("user:" + str(u["email"]) + ":meetings",
                    "meeting:" + str(meeting_id)):
-        r.srem("user:" + str(u["id"]) + ":meetings", "meeting:" + str(meeting_id))
+
         headers = {"Authorization": f"Bearer {meetings_api_key}"}
-        return make_request(url, method="DELETE", headers=headers)
+        rsp = make_request(url, method="DELETE", headers=headers)
+        r.srem("user:" + str(u["email"]) + ":meetings",
+               "meeting:" + str(meeting_id))
+        for key in r.scan_iter("user:*:meetings"):
+            # Check if the value is a member of the Set
+            if r.sismember(key, "meeting:" + str(meeting_id)):
+                email_data = {
+                    "subject": f"{u['username']} canceled a meeting",
+                    "recipients": key.split(":")[1],
+                    "body": f"{u['username']} canceled a meeting."
+                }
+                send_email(email_data)
+                r.srem(key, "meeting:" + str(meeting_id))
+                continue
+        return rsp
     else:
         raise HTTPException(status_code=403, detail="Unauthorized")
 
@@ -318,12 +353,12 @@ def get_documents(token: str):
     params = {"user_id": "0"}
     headers = {"Authorization": f"Bearer {docs_api_key}"}
     rsp = make_request(url, params=params, headers=headers)
-    user_key = "user:" + str(u["id"]) + ":documents"
+    user_key = "user:" + str(u["email"]) + ":documents"
     d = {}
     for document in rsp:
         if r.sismember(user_key, "document:" + str(document["id"])):
             d[document["id"]] = document
-            d[document["id"]]["uploaded_by"] = u["id"]
+            d[document["id"]]["uploaded_by"] = u["email"]
     return d
 
 
@@ -332,7 +367,7 @@ def get_document(token: str,
                  document_id: str):
     url = f"{docs_service_url}/documents/{document_id}"
     u = verify_token(token)
-    if r.sismember("user:" + str(u["id"]) + ":documents",
+    if r.sismember("user:" + str(u["email"]) + ":documents",
                    "document:" + str(document_id)):
         headers = {"Authorization": f"Bearer {docs_api_key}"}
 
@@ -372,7 +407,7 @@ def upload_document(token: str,
     files = {"file": (file.filename, file.file.read(), file.content_type)}
     headers = {"Authorization": f"Bearer {docs_api_key}"}
     rsp = make_request(url, method="POST", files=files, headers=headers)
-    user_key = "user:" + str(u["id"]) + ":documents"
+    user_key = "user:" + str(u["email"]) + ":documents"
     r.sadd(user_key, "document:" + str(rsp["id"]))
     return rsp
 
@@ -382,7 +417,7 @@ def delete_document(token: str,
                     document_id: str):
     url = f"{docs_service_url}/documents/{document_id}"
     u = verify_token(token)
-    user_key = "user:" + str(u["id"]) + ":documents"
+    user_key = "user:" + str(u["email"]) + ":documents"
     if r.sismember(user_key, "document:" + str(document_id)):
         r.srem(user_key, "document:" + str(document_id))
         headers = {"Authorization": f"Bearer {docs_api_key}"}
@@ -445,3 +480,10 @@ def download_document(token: str,
 
 
 # Notifications endpoints
+def send_email(data: dict):
+    url = f"{notifications_service_url}/email/"
+    headers = {"api-key": notifications_api_key}
+
+    rsp = make_request(url, method="POST", params=data, headers=headers)
+    print(rsp)
+    return rsp
