@@ -83,7 +83,7 @@ services:
     environment: 
       - DATABASE_URL=postgresql://postgres:example@meetings_db:5432/postgres
     ports:
-      - "80:80"
+      - "80:80"  #Mudar a porta aqui para 8005 que foi o que meti para os kubernetes
     depends_on:
       - meetings_db
   

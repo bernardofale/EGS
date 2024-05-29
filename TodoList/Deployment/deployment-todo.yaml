@@ -115,7 +115,7 @@ spec:
       paths:
       - path: /
         pathType: Prefix
-        backend:
+        backend:todo-db
           service:
             name: todo-api
             port: 

@@ -275,14 +275,149 @@ spec:
   selector:
     app: adminer
 
+# Deployment documents
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documents
+  namespace: egs-docmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: documents
+  template:
+    metadata:
+      labels:
+        app: documents
+    spec:
+      containers:
+      - name: documents
+        image: registry.deti/egs-docmanager/documents:1.2
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "10m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8009
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://postgres:example@documents-db:5432/postgres"
+                
+
+# Service documents
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: documents
+  namespace: egs-docmanager
+spec:
+  ports:
+    - port: 8009
+      targetPort: 8009
+  selector:
+    app: documents
+
+# Deployment documents db 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: documents-db
+  namespace: egs-docmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: documents-db
+  template:
+    metadata:
+      labels:
+        app: documents-db
+    spec:
+      containers:
+      - image: postgres
+        name: documents-db
+        ports:
+        - containerPort: 5432
+          name: postgres
+        volumeMounts:
+          - name: postgres-persistent-storage
+            mountPath: /var/lib/postgres
+        env:
+        - name: POSTGRES_PASSWORD
+          value: example
+      volumes:
+        - name: postgres-persistent-storage
+          persistentVolumeClaim:
+            claimName: documents-pv-claim
+
+#  Service documents DB
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: documents-db
+  namespace: egs-docmanager
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432  
+  selector:
+    app: documents-db
+  type: NodePort
 
 
-# Ingress Fazer O Ingress para todos as apis
+# Deployment for Adminer documents
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: adminer
+  namespace: egs-docmanager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: adminer
+  template:
+    metadata:
+      labels:
+        app: adminer
+    spec:
+      containers:
+      - name: adminer
+        image: adminer
+        ports:
+        - containerPort: 8009
+          name: adminer
+
+# Service for Adminer documents
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: adminer
+  namespace: egs-docmanager
+spec:
+  ports:
+    - port: 8009
+      targetPort: 8009
+  selector:
+    app: adminer
+
+
+# Ingress
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: todo-api-k3s
+  name: documents-api-k3s
   namespace: egs-docmanager
   annotations:
     kubernetes.io/ingress.class: traefik
@@ -291,14 +426,15 @@ metadata:
     traefik.ingress.kubernetes.io/redirect-permanent: "true"
 spec:
   rules:
-  - host: grupo7-egs-deti.ua.pt   
+  - host: grupo7-egs-deti.ua.pt
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: frontend
+            name: documents
             port: 
-              number: 8005
+              number: 8009
+
 
