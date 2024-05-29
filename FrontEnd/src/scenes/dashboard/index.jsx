@@ -160,7 +160,7 @@ const Dashboard = () => {
                 Location: {mostRecentMeeting.location}
               </Typography>
               <Typography variant="h6" color="textSecondary">
-                Attendee: {mostRecentMeeting.created_by}
+                Created By: {mostRecentMeeting.created_by}
               </Typography>
             </>
           ) : (

@@ -8,14 +8,14 @@ const Meetings = () => {
   const [meetings, setMeetings] = useState([]);
   const [meetingTitle, setMeetingTitle] = useState("");
   const [location, setLocation] = useState("");
-  const [attendees, setAttendees] = useState([{ user_id: "", status: "pending" }]);
+  const [attendee, setAttendee] = useState({ user_id: "", status: "pending" });
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
   const addMeeting = async () => {
     const token = Cookies.get('token');
 
-    if (!meetingTitle || !location || !startDate || !endDate) {
+    if (!meetingTitle || !location || !startDate || !endDate || !attendee.user_id) {
       console.error("Preencha todos os campos obrigatórios.");
       return;
     }
@@ -23,11 +23,11 @@ const Meetings = () => {
     const newMeeting = {
       title: meetingTitle,
       location: location,
-      start_date: new Date(startDate).toISOString(), // Convert to ISO string
-      end_date: new Date(endDate).toISOString(), // Convert to ISO string
+      start_date: new Date(startDate).toISOString(), 
+      end_date: new Date(endDate).toISOString(),
       todo_id: "string",
-      attendees: attendees.filter(att => att.user_id !== ""), // Remove attendees without user_id
-      created_by: "string" // Atualize este campo conforme necessário
+      attendees: [attendee],
+      created_by: "string"
     };
 
     try {
@@ -49,22 +49,12 @@ const Meetings = () => {
       setMeetings([...meetings, createdMeeting]);
       setMeetingTitle("");
       setLocation("");
-      setAttendees([{ user_id: "", status: "pending" }]);
+      setAttendee({ user_id: "", status: "pending" });
       setStartDate("");
       setEndDate("");
     } catch (error) {
-      console.error("Erro ao adicionar a reunião:", error);
+      console.error("Erro ao adicionar a reunião:", error.response ? error.response.data : error.message);
     }
-  };
-
-  const handleAttendeeChange = (index, value) => {
-    const newAttendees = [...attendees];
-    newAttendees[index].user_id = value;
-    setAttendees(newAttendees);
-  };
-
-  const addAttendee = () => {
-    setAttendees([...attendees, { user_id: "", status: "pending" }]);
   };
 
   return (
@@ -117,20 +107,15 @@ const Meetings = () => {
             }}
           />
         </Grid>
-        {attendees.map((attendee, index) => (
-          <Grid key={index} item xs={12} sm={6}>
-            <TextField
-              fullWidth
-              variant="filled"
-              type="email"
-              label={`Attendee ${index + 1}`}
-              value={attendee.user_id}
-              onChange={(e) => handleAttendeeChange(index, e.target.value)}
-            />
-          </Grid>
-        ))}
-        <Grid item xs={12}>
-          <Button onClick={addAttendee}>Add Attendee</Button>
+        <Grid item xs={12} sm={6}>
+          <TextField
+            fullWidth
+            variant="filled"
+            type="email"
+            label="Attendee"
+            value={attendee.user_id}
+            onChange={(e) => setAttendee({ ...attendee, user_id: e.target.value })}
+          />
         </Grid>
       </Grid>
       <Box display="flex" justifyContent="center" mt={2}>
