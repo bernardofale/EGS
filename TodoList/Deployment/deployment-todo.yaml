@@ -1,3 +1,4 @@
+# TODO DEPLOYMENT
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -29,6 +30,7 @@ spec:
         env:
         - name: DATABASE_URL
           value: "mysql://docker:docker@todo-db:3306/exampledb"
+#TODO SERVICE
 ---
 apiVersion: v1
 kind: Service
@@ -43,6 +45,7 @@ spec:
     app: todo-api
 
 
+#DATABASE TODO
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -121,3 +124,22 @@ spec:
             port: 
               number: 8002
 
+
+
+        env:
+        - name: MAIL_USERNAME
+          value: "egs.2024@outlook.com"
+        - name: MAIL_PASSWORD
+          value: "Egs_2024Notify!"
+        - name: MAIL_FROM
+          value: "egs.2024@outlook.com"
+        - name: MAIL_PORT
+          value: "587"
+        - name: MAIL_SERVER
+          value: "smtp-mail.outlook.com"
+        - name: MAIL_FROM_NAME
+          value: "Notify"
+        - name: TOKEN
+          value: "6942311486:AAHzFqxWOuM7eeRSs_K40Ih0S0XtHVfL01s"
+        - name: DATABASE_URL
+          value: "postgresql://postgres:my_password@postgres-notification-db:5432/notification-db"
