@@ -94,7 +94,7 @@ The API is configured to run using Docker and Kubernetes. Ensure you have the fo
   - Ingress configuration for HTTP traffic routing using Traefik.
 
 ## Testing
-All endpoints were tested and confirmed to be fully functional both locally and on the Kubernetes cluster.
+All endpoints were tested and confirmed to be fully functional.
 
 ---
 
