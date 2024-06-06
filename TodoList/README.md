@@ -94,7 +94,3 @@ sudo docker-compose up --build
 
 To remove:
 sudo docker volume rm $(sudo docker volume ls -qf dangling=true)
-
----
-
-Feel free to explore the API and manage your tasks efficiently!
