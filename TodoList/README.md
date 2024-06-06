@@ -1,10 +1,3 @@
-Para correr o docker:
-sudo docker-compose up --build
-
-Caso esteja a ficar stuck:
-sudo docker volume rm $(sudo docker volume ls -qf dangling=true)
-
-
 # To-Do API
 
 ## Overview
@@ -95,6 +88,12 @@ The API is configured to run using Docker and Kubernetes. Ensure you have the fo
 
 ## Testing
 All endpoints were tested and confirmed to be fully functional.
+
+To run docker:
+sudo docker-compose up --build
+
+To remove:
+sudo docker volume rm $(sudo docker volume ls -qf dangling=true)
 
 ---
 
